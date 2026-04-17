@@ -67,6 +67,24 @@ export function getDepreciationCurve(vehicle, annualKm, yearsAhead = 10) {
   });
 }
 
+export function getMaxPrice(targetMonthly, rate, durationMonths, data) {
+  const r = rate / 100 / 12;
+  const n = durationMonths;
+  if (!targetMonthly || !n) return null;
+
+  const loanAmount = rate === 0
+    ? targetMonthly * n
+    : targetMonthly * (1 - Math.pow(1 + r, -n)) / r;
+
+  const deductions =
+    (data.withTradeIn ? (parseFloat(data.tradeIn) || 0) : 0) +
+    (parseFloat(data.negotiation) || 0) +
+    (parseFloat(data.aids) || 0) +
+    (parseFloat(data.apport) || 0);
+
+  return Math.round(loanAmount + deductions);
+}
+
 export function getFinancing(data) {
   let price =
     safe(data.price) -

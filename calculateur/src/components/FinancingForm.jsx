@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useT } from "../i18n";
+import { getMaxPrice } from "../utils/calculations";
 
 function Field({ label, value, onChange }) {
   const initial = value !== undefined && value !== "" && value !== 0 ? String(value) : "";
@@ -76,6 +77,14 @@ function PriceBreakdown({ data, t }) {
 
 export default function FinancingForm({ data, setData }) {
   const t = useT();
+  const [showBudget, setShowBudget] = useState(false);
+  const [targetMonthly, setTargetMonthly] = useState(0);
+  const [targetRaw, setTargetRaw] = useState("");
+  const [targetError, setTargetError] = useState(false);
+
+  const maxPrice = showBudget && targetMonthly
+    ? getMaxPrice(targetMonthly, data.rate || 0, data.duration || 0, data)
+    : null;
 
   return (
     <div className="card">
@@ -132,6 +141,42 @@ export default function FinancingForm({ data, setData }) {
           </div>
         )}
       </div>
+
+      <div className="field-divider" />
+
+      <div className="finance-reprise">
+        <label className="field-col-label">{t.budgetMax}</label>
+        <input type="checkbox" checked={showBudget}
+          onChange={(e) => setShowBudget(e.target.checked)} />
+      </div>
+
+      {showBudget && (
+        <div style={{ marginTop: 10 }}>
+          <div className="field-col" style={{ maxWidth: 220 }}>
+            <label className="field-col-label">{t.targetMonthly}</label>
+            <input
+              type="text"
+              value={targetRaw}
+              onChange={(e) => {
+                const input = e.target.value;
+                const normalized = input.replace(/,/g, ".");
+                setTargetRaw(input);
+                const num = parseFloat(normalized);
+                if (isNaN(num)) { setTargetError(true); setTargetMonthly(0); }
+                else { setTargetError(false); setTargetMonthly(num); }
+              }}
+              className={targetError ? "field-input-error" : ""}
+            />
+            {targetError && <span className="field-error-msg">Valeur invalide</span>}
+          </div>
+          {maxPrice !== null && (
+            <div className="budget-max-result">
+              <span className="budget-max-price">{t.maxPriceResult(maxPrice)}</span>
+              <span className="budget-max-hint">{t.maxPriceHint}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

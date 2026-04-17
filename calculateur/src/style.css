@@ -365,6 +365,29 @@ input[type="range"] {
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
 
+.budget-max-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+}
+
+.budget-max-price {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.budget-max-hint {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: normal;
+}
+
 @media (max-width: 600px) {
   .container {
     padding: 12px;
