@@ -92,6 +92,11 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
     };
   });
 
+  const breakevenEntry = smoothedData.find(
+    (d) => d["Nouveau véhicule"] <= d["Ancien véhicule"]
+  );
+  const breakevenName = breakevenEntry?.name;
+
   const smoothedTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
@@ -178,12 +183,23 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
       </ResponsiveContainer>
 
       <h3 style={{ marginTop: 32, marginBottom: 4 }}>Coût mensuel lissé dans le temps</h3>
-      <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
-        Coût moyen mensuel en tenant compte du remboursement du prêt sur sa durée ({finance.duration || 0} ans).
-      </p>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+          Coût moyen mensuel en tenant compte du prêt ({finance.duration || 0} ans).
+        </p>
+        {breakevenName ? (
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#10b981", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "3px 10px" }}>
+            Rentable dès {breakevenName}
+          </span>
+        ) : (
+          <span style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "3px 10px" }}>
+            Non rentable sur la période
+          </span>
+        )}
+      </div>
 
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={smoothedData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+        <LineChart data={smoothedData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
           <YAxis tickFormatter={(v) => `${v} €`} tick={{ fontSize: 12 }} />
           <Tooltip content={smoothedTooltip} />
@@ -192,8 +208,16 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
             x={`${finance.duration || 0} an${(finance.duration || 0) > 1 ? "s" : ""}`}
             stroke="#f59e0b"
             strokeDasharray="4 4"
-            label={{ value: "Fin du prêt", fontSize: 12, fill: "#f59e0b" }}
+            label={{ value: "Fin du prêt", fontSize: 11, fill: "#f59e0b", position: "insideTopRight" }}
           />
+          {breakevenName && (
+            <ReferenceLine
+              x={breakevenName}
+              stroke="#10b981"
+              strokeDasharray="4 4"
+              label={{ value: "Seuil", fontSize: 11, fill: "#10b981", position: "insideTopLeft" }}
+            />
+          )}
           <Line type="monotone" dataKey="Nouveau véhicule" stroke="#3b82f6" strokeWidth={2} dot={false} />
           <Line type="monotone" dataKey="Ancien véhicule" stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="5 5" />
         </LineChart>

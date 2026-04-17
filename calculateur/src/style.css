@@ -11,9 +11,28 @@ body {
   padding: 20px;
 }
 
-h1 {
+.app-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
+}
+
+.app-header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #1e293b 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 6px;
+}
+
+.app-footer {
+  text-align: center;
+  margin-top: 32px;
+  padding: 16px;
+  font-size: 12px;
+  color: #94a3b8;
 }
 
 .card {
