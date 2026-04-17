@@ -28,7 +28,6 @@ export default function App() {
   const [finance, setFinance] = useState(() => load("finance", {}));
   const [kmCity, setKmCity] = useState(() => load("kmCity", 5000));
   const [kmHighway, setKmHighway] = useState(() => load("kmHighway", 5000));
-  const [showResults, setShowResults] = useState(() => load("showResults", false));
 
   useEffect(() => { save("oldCar", oldCar); }, [oldCar]);
   useEffect(() => { save("newCar", newCar); }, [newCar]);
@@ -37,7 +36,6 @@ export default function App() {
   useEffect(() => { save("finance", finance); }, [finance]);
   useEffect(() => { save("kmCity", kmCity); }, [kmCity]);
   useEffect(() => { save("kmHighway", kmHighway); }, [kmHighway]);
-  useEffect(() => { save("showResults", showResults); }, [showResults]);
 
   return (
     <div className="container">
@@ -82,29 +80,21 @@ export default function App() {
 
       <FinancingForm data={finance} setData={setFinance} />
 
-      <button className="btn-calculate" onClick={() => setShowResults(true)}>
-        {t.calculate}
-      </button>
+      <Results
+        oldCar={{ ...oldCar, type: oldType }}
+        newCar={{ ...newCar, type: newType }}
+        finance={finance}
+        kmCity={kmCity}
+        kmHighway={kmHighway}
+      />
 
-      {showResults && (
-        <Results
-          oldCar={{ ...oldCar, type: oldType }}
-          newCar={{ ...newCar, type: newType }}
-          finance={finance}
-          kmCity={kmCity}
-          kmHighway={kmHighway}
-        />
-      )}
-
-      {showResults && (
-        <DepreciationChart
-          oldCar={{ ...oldCar, type: oldType }}
-          newCar={{ ...newCar, type: newType }}
-          kmCity={kmCity}
-          kmHighway={kmHighway}
-          finance={finance}
-        />
-      )}
+      <DepreciationChart
+        oldCar={{ ...oldCar, type: oldType }}
+        newCar={{ ...newCar, type: newType }}
+        kmCity={kmCity}
+        kmHighway={kmHighway}
+        finance={finance}
+      />
 
       <footer className="app-footer">
         {t.copyright(new Date().getFullYear())}

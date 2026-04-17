@@ -78,8 +78,8 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
     },
   ];
 
-  const loanMonths = (finance.duration || 0) * 12;
-  const maxYears = Math.max((finance.duration || 0) + 5, 10);
+  const loanMonths = finance.duration || 0;
+  const maxYears = Math.max(Math.ceil(loanMonths / 12) + 5, 10);
 
   const smoothedData = Array.from({ length: maxYears }, (_, i) => {
     const year = i + 1;
@@ -186,7 +186,7 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
       <h3 style={{ marginTop: 32, marginBottom: 4 }}>Coût mensuel lissé dans le temps</h3>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-          Coût moyen mensuel en tenant compte du prêt ({finance.duration || 0} ans).
+          Coût moyen mensuel en tenant compte du prêt ({finance.duration || 0} mois).
         </p>
         {breakevenName ? (
           <span style={{ fontSize: 13, fontWeight: 600, color: "#10b981", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "3px 10px" }}>
@@ -206,7 +206,7 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
           <Tooltip content={smoothedTooltip} />
           <Legend />
           <ReferenceLine
-            x={`${finance.duration || 0} an${(finance.duration || 0) > 1 ? "s" : ""}`}
+            x={`${Math.ceil((finance.duration || 0) / 12)} an${Math.ceil((finance.duration || 0) / 12) > 1 ? "s" : ""}`}
             stroke="#f59e0b"
             strokeDasharray="4 4"
             label={{ value: "Fin du prêt", fontSize: 11, fill: "#f59e0b", position: "insideTopRight" }}

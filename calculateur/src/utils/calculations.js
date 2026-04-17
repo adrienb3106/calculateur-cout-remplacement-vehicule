@@ -28,11 +28,11 @@ export function getTotalUsageCost(vehicle, kmCity, kmHighway) {
   };
 }
 
-export function getLoanMonthly(amount, rate, duration) {
+export function getLoanMonthly(amount, rate, durationMonths) {
   const monthlyRate = rate / 100 / 12;
-  const n = duration * 12;
+  const n = durationMonths;
 
-  if (!amount || !duration) return 0;
+  if (!amount || !n) return 0;
   if (rate === 0) return amount / n;
 
   return (amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -n));

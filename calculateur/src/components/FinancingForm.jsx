@@ -35,19 +35,19 @@ function PriceBreakdown({ data, t }) {
   steps.push({ label: t.catalogPrice, value: current });
 
   if (data.negotiation) {
-    current -= parseFloat(data.negotiation) || 0;
+    current -= data.negotiation;
     steps.push({ label: t.afterNegotiation, value: current, delta: -data.negotiation });
   }
   if (data.apport) {
-    current -= parseFloat(data.apport) || 0;
+    current -= data.apport;
     steps.push({ label: t.afterDownPayment, value: current, delta: -data.apport });
   }
   if (data.aids) {
-    current -= parseFloat(data.aids) || 0;
+    current -= data.aids;
     steps.push({ label: t.afterSubsidies, value: current, delta: -data.aids });
   }
   if (data.withTradeIn && data.tradeIn) {
-    current -= parseFloat(data.tradeIn) || 0;
+    current -= data.tradeIn;
     steps.push({ label: t.afterTradeIn, value: current, delta: -data.tradeIn });
   }
 
@@ -61,7 +61,7 @@ function PriceBreakdown({ data, t }) {
           <span className="price-step-values">
             {s.delta != null && (
               <span className="price-step-delta">
-                − {Math.abs(parseFloat(s.delta)).toLocaleString("fr-FR")} €
+                − {Math.abs(s.delta).toLocaleString("fr-FR")} €
               </span>
             )}
             <span className="price-step-value">
@@ -83,14 +83,14 @@ export default function FinancingForm({ data, setData }) {
 
       <p className="section-label">{t.priceReductions}</p>
       <div className="finance-grid">
-        <Field label={t.vehiclePrice} value={data.price ?? ""}
-          onChange={(e) => setData({ ...data, price: parseFloat(e.target.value) || 0 })} />
-        <Field label={t.negotiation} value={data.negotiation ?? ""}
-          onChange={(e) => setData({ ...data, negotiation: parseFloat(e.target.value) || 0 })} />
-        <Field label={t.downPayment} value={data.apport ?? ""}
-          onChange={(e) => setData({ ...data, apport: parseFloat(e.target.value) || 0 })} />
-        <Field label={t.subsidies} value={data.aids ?? ""}
-          onChange={(e) => setData({ ...data, aids: parseFloat(e.target.value) || 0 })} />
+        <Field label={t.vehiclePrice} value={data.price}
+          onChange={(num) => setData({ ...data, price: num })} />
+        <Field label={t.negotiation} value={data.negotiation}
+          onChange={(num) => setData({ ...data, negotiation: num })} />
+        <Field label={t.downPayment} value={data.apport}
+          onChange={(num) => setData({ ...data, apport: num })} />
+        <Field label={t.subsidies} value={data.aids}
+          onChange={(num) => setData({ ...data, aids: num })} />
       </div>
 
       <div className="field-divider" />
@@ -101,8 +101,8 @@ export default function FinancingForm({ data, setData }) {
           onChange={(e) => setData({ ...data, withTradeIn: e.target.checked })} />
         {data.withTradeIn && (
           <div style={{ flex: 1 }}>
-            <Field label={t.tradeInValue} value={data.tradeIn ?? ""}
-              onChange={(e) => setData({ ...data, tradeIn: parseFloat(e.target.value) || 0 })} />
+            <Field label={t.tradeInValue} value={data.tradeIn}
+              onChange={(num) => setData({ ...data, tradeIn: num })} />
           </div>
         )}
       </div>
@@ -113,10 +113,10 @@ export default function FinancingForm({ data, setData }) {
 
       <p className="section-label">{t.loan}</p>
       <div className="finance-grid">
-        <Field label={t.loanDuration} value={data.duration ?? ""}
-          onChange={(e) => setData({ ...data, duration: parseFloat(e.target.value) || 0 })} />
-        <Field label={t.interestRate} value={data.rate ?? ""}
-          onChange={(e) => setData({ ...data, rate: parseFloat(e.target.value) || 0 })} />
+        <Field label={t.loanDuration} value={data.duration}
+          onChange={(num) => setData({ ...data, duration: num })} />
+        <Field label={t.interestRate} value={data.rate}
+          onChange={(num) => setData({ ...data, rate: num })} />
       </div>
 
       <div className="field-divider" />
@@ -127,8 +127,8 @@ export default function FinancingForm({ data, setData }) {
           onChange={(e) => setData({ ...data, withCharger: e.target.checked })} />
         {data.withCharger && (
           <div style={{ flex: 1 }}>
-            <Field label={t.chargerCost} value={data.chargerCost ?? ""}
-              onChange={(e) => setData({ ...data, chargerCost: parseFloat(e.target.value) || 0 })} />
+            <Field label={t.chargerCost} value={data.chargerCost}
+              onChange={(num) => setData({ ...data, chargerCost: num })} />
           </div>
         )}
       </div>
