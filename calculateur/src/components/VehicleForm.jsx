@@ -1,10 +1,10 @@
 import { useT } from "../i18n";
 
-function Field({ label, value, onChange }) {
+function Field({ label, value, onChange, integer }) {
   return (
     <div className="field-row">
       <label>{label}</label>
-      <input type="number" value={value} onChange={onChange} />
+      <input type="text" inputMode={integer ? "numeric" : "decimal"} value={value} onChange={onChange} />
     </div>
   );
 }

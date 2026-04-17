@@ -102,17 +102,19 @@ body {
   font-weight: 500;
 }
 
-.field-col input[type="number"] {
+.field-col input[type="text"] {
   padding: 7px 10px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   font-size: 13px;
   background: #f8fafc;
+  color: #1e293b;
+  -webkit-text-fill-color: #1e293b;
   width: 100%;
   box-sizing: border-box;
 }
 
-.field-col input[type="number"]:focus {
+.field-col input[type="text"]:focus {
   background: white;
   border-color: #3b82f6;
   outline: none;
@@ -202,7 +204,7 @@ body {
   color: #475569;
 }
 
-.field-row input[type="number"] {
+.field-row input[type="text"] {
   flex: 0 0 110px;
   padding: 7px 10px;
   border-radius: 8px;
@@ -210,9 +212,11 @@ body {
   font-size: 13px;
   text-align: right;
   background: #f8fafc;
+  color: #1e293b;
+  -webkit-text-fill-color: #1e293b;
 }
 
-.field-row input[type="number"]:focus {
+.field-row input[type="text"]:focus {
   background: white;
   border-color: #3b82f6;
   outline: none;
@@ -233,6 +237,8 @@ select {
   border: 1px solid #e2e8f0;
   font-size: 13px;
   background: #f8fafc;
+  color: #1e293b;
+  -webkit-text-fill-color: #1e293b;
 }
 
 input:focus,
@@ -241,17 +247,6 @@ select:focus {
   border-color: #3b82f6;
 }
 
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  appearance: none;
-  margin: 0;
-}
-
-input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
 
 .result {
   background: #f8fafc;

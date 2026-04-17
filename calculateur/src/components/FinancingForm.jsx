@@ -4,7 +4,7 @@ function Field({ label, value, onChange }) {
   return (
     <div className="field-col">
       <label className="field-col-label">{label}</label>
-      <input type="number" value={value} onChange={onChange} />
+      <input type="text" inputMode="decimal" value={value} onChange={onChange} />
     </div>
   );
 }

@@ -64,12 +64,12 @@ export default function App() {
         <div className="km-row">
           <div className="field-row">
             <label>{t.cityKm}</label>
-            <input type="number" min="0" step="500" value={kmCity}
+            <input type="text" inputMode="numeric" min="0" step="500" value={kmCity}
               onChange={(e) => setKmCity(parseInt(e.target.value) || 0)} />
           </div>
           <div className="field-row">
             <label>{t.highwayKm}</label>
-            <input type="number" min="0" step="500" value={kmHighway}
+            <input type="text" inputMode="numeric" min="0" step="500" value={kmHighway}
               onChange={(e) => setKmHighway(parseInt(e.target.value) || 0)} />
           </div>
         </div>
