@@ -1,10 +1,26 @@
+import { useState } from "react";
 import { useT } from "../i18n";
 
 function Field({ label, value, onChange }) {
+  const initial = value !== undefined && value !== "" && value !== 0 ? String(value) : "";
+  const [raw, setRaw] = useState(initial);
+  const [error, setError] = useState(false);
+
+  function handleChange(e) {
+    const input = e.target.value;
+    const normalized = input.replace(/,/g, ".");
+    setRaw(input);
+    if (input === "") { setError(false); onChange(0); return; }
+    const num = parseFloat(normalized);
+    if (isNaN(num)) { setError(true); }
+    else { setError(false); onChange(num); }
+  }
+
   return (
     <div className="field-col">
       <label className="field-col-label">{label}</label>
-      <input type="text" inputMode="decimal" value={value} onChange={onChange} />
+      <input type="text" value={raw} onChange={handleChange} className={error ? "field-input-error" : ""} />
+      {error && <span className="field-error-msg">Valeur invalide</span>}
     </div>
   );
 }

@@ -210,8 +210,24 @@ body {
   color: #475569;
 }
 
-.field-row input[type="text"] {
+.field-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   flex: 0 0 110px;
+}
+
+.field-error-msg {
+  font-size: 10px;
+  color: #ef4444;
+  margin-top: 2px;
+}
+
+.field-input-error {
+  border-color: #ef4444 !important;
+}
+
+.field-row input[type="text"] {
   padding: 7px 10px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
@@ -367,7 +383,7 @@ input[type="range"] {
     grid-template-columns: 1fr;
   }
 
-  .field-row input[type="text"] {
+  .field-input-wrap {
     flex: 0 0 90px;
   }
 
