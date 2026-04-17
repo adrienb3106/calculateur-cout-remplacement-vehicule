@@ -1,0 +1,167 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f5f7fb;
+  color: #1e293b;
+}
+
+.container {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.field-row label {
+  flex: 1;
+  font-size: 14px;
+  color: #475569;
+}
+
+.field-row input[type="number"] {
+  flex: 0 0 140px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  text-align: right;
+}
+
+input,
+select {
+  width: 100%;
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.result {
+  background: #f8fafc;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 28px;
+  font-size: 14px;
+}
+
+.result-table th,
+.result-table td {
+  padding: 10px 14px;
+  text-align: right;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.result-table th:first-child,
+.result-table td:first-child {
+  text-align: left;
+  color: #475569;
+}
+
+.result-table th {
+  font-weight: 600;
+  color: #1e293b;
+  background: #f1f5f9;
+}
+
+.result-table .total-row td {
+  font-weight: 700;
+  background: #f1f5f9;
+}
+
+span {
+  font-weight: bold;
+}
+
+input[type="range"] {
+  width: 100%;
+  margin: 10px 0 20px;
+}
+
+.btn-calculate {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 20px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-calculate:hover {
+  background: #2563eb;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.toggle {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.toggle.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  font-weight: 600;
+}
