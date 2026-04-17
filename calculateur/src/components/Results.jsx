@@ -51,6 +51,7 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
 
   const diff = totalNewWithLoan - totalOld;
   const diffAfter = totalNewAfterLoan - totalOld;
+  const charger = financing.chargerCost || 0;
 
   const chartData = [
     {
@@ -58,18 +59,21 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
       Carburant: oldCost.fuel / 12,
       Entretien: oldCost.maintenance / 12,
       Prêt: 0,
+      Borne: 0,
     },
     {
       name: "Nouveau (avec prêt)",
       Carburant: newCost.fuel / 12,
       Entretien: newCost.maintenance / 12,
       Prêt: financing.monthlyLoan,
+      Borne: 0,
     },
     {
       name: "Nouveau (après prêt)",
       Carburant: newCost.fuel / 12,
       Entretien: newCost.maintenance / 12,
       Prêt: 0,
+      Borne: 0,
     },
   ];
 
@@ -80,7 +84,7 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
     const year = i + 1;
     const months = year * 12;
     const activeLoan = Math.min(months, loanMonths);
-    const smoothedNew = newCost.monthly + (activeLoan / months) * financing.monthlyLoan;
+    const smoothedNew = newCost.monthly + (activeLoan / months) * financing.monthlyLoan + charger / months;
     return {
       name: `${year} an${year > 1 ? "s" : ""}`,
       "Nouveau véhicule": Math.round(smoothedNew * 100) / 100,
@@ -134,10 +138,18 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
             <td>{fmt(financing.monthlyLoan)} €/mois</td>
             <td>—</td>
           </tr>
+          {charger > 0 && (
+            <tr>
+              <td>Borne de recharge (1er mois)</td>
+              <td>—</td>
+              <td>{fmt(charger)} € (unique)</td>
+              <td>—</td>
+            </tr>
+          )}
           <tr className="total-row">
-            <td>Total</td>
+            <td>Total mensuel</td>
             <td>{fmt(totalOld)} €/mois</td>
-            <td>{fmt(totalNewWithLoan)} €/mois</td>
+            <td>{fmt(totalNewWithLoan)} €/mois {charger > 0 && <span style={{fontSize:11, color:"#f59e0b"}}>+{fmt(charger)} € M1</span>}</td>
             <td>{fmt(totalNewAfterLoan)} €/mois</td>
           </tr>
           <tr>

@@ -38,6 +38,35 @@ export function getLoanMonthly(amount, rate, duration) {
   return (amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -n));
 }
 
+export function getDepreciationCurve(vehicle, annualKm, yearsAhead = 10) {
+  const price = safe(vehicle.purchasePrice);
+  if (!price) return [];
+
+  const currentYear = new Date().getFullYear();
+  const registrationYear = safe(vehicle.year) || currentYear;
+  const purchaseYear = safe(vehicle.purchaseYear) || registrationYear;
+
+  // Taux annuel selon le type + kilométrage
+  const baseRate = vehicle.type === "electric" ? 0.20 : 0.15;
+  const kmPenalty = Math.max(0, (annualKm - 15000) / 10000) * 0.02;
+  const rate = Math.min(0.40, baseRate + kmPenalty);
+
+  // La valeur au moment de l'achat = price
+  // On remonte jusqu'à l'immatriculation pour afficher la courbe complète
+  const ageAtPurchase = Math.max(0, purchaseYear - registrationYear);
+  const valueAtRegistration = price / Math.pow(1 - rate, ageAtPurchase);
+
+  const startYear = registrationYear;
+  const endYear = currentYear + yearsAhead;
+
+  return Array.from({ length: endYear - startYear + 1 }, (_, i) => {
+    const year = startYear + i;
+    const age = year - registrationYear;
+    const value = Math.round(Math.max(0, valueAtRegistration * Math.pow(1 - rate, age)));
+    return { year, value, isPurchase: year === purchaseYear, isToday: year === currentYear };
+  });
+}
+
 export function getFinancing(data) {
   let price =
     safe(data.price) -
@@ -55,8 +84,11 @@ export function getFinancing(data) {
     safe(data.duration)
   );
 
+  const chargerCost = data.withCharger ? safe(data.chargerCost) : 0;
+
   return {
     finalPrice: price,
     monthlyLoan,
+    chargerCost,
   };
 }
