@@ -16,9 +16,11 @@ import VehicleForm from "./components/VehicleForm";
 import FinancingForm from "./components/FinancingForm";
 import Results from "./components/Results";
 import DepreciationChart from "./components/DepreciationChart";
+import { useT } from "./i18n";
 import "./style.css";
 
 export default function App() {
+  const t = useT();
   const [oldCar, setOldCar] = useState(() => load("oldCar", {}));
   const [newCar, setNewCar] = useState(() => load("newCar", {}));
   const [oldType, setOldType] = useState(() => load("oldType", "thermal"));
@@ -39,70 +41,49 @@ export default function App() {
 
   return (
     <div className="container">
-      <h1>Comparateur de coût véhicule</h1>
+      <div className="app-header">
+        <h1>{t.appTitle}</h1>
+      </div>
 
       <div className="card">
-        <h2>Situation</h2>
+        <h2>{t.situation}</h2>
 
-        <label>J'ai un véhicule :</label>
+        <label>{t.iHave}</label>
         <div className="toggle-group">
-          <button
-            className={oldType === "thermal" ? "toggle active" : "toggle"}
-            onClick={() => setOldType("thermal")}
-          >
-            Thermique
-          </button>
-          <button
-            className={oldType === "electric" ? "toggle active" : "toggle"}
-            onClick={() => setOldType("electric")}
-          >
-            Électrique
-          </button>
+          <button className={oldType === "thermal" ? "toggle active" : "toggle"} onClick={() => setOldType("thermal")}>{t.thermal}</button>
+          <button className={oldType === "electric" ? "toggle active" : "toggle"} onClick={() => setOldType("electric")}>{t.electric}</button>
         </div>
 
-        <label>Je veux acheter :</label>
+        <label>{t.iWant}</label>
         <div className="toggle-group">
-          <button
-            className={newType === "thermal" ? "toggle active" : "toggle"}
-            onClick={() => setNewType("thermal")}
-          >
-            Thermique
-          </button>
-          <button
-            className={newType === "electric" ? "toggle active" : "toggle"}
-            onClick={() => setNewType("electric")}
-          >
-            Électrique
-          </button>
+          <button className={newType === "thermal" ? "toggle active" : "toggle"} onClick={() => setNewType("thermal")}>{t.thermal}</button>
+          <button className={newType === "electric" ? "toggle active" : "toggle"} onClick={() => setNewType("electric")}>{t.electric}</button>
         </div>
 
-        <p className="section-label">Kilométrage annuel</p>
+        <p className="section-label">{t.annualKm}</p>
         <div className="km-row">
           <div className="field-row">
-            <label>Ville (km)</label>
+            <label>{t.cityKm}</label>
             <input type="number" min="0" step="500" value={kmCity}
               onChange={(e) => setKmCity(parseInt(e.target.value) || 0)} />
           </div>
           <div className="field-row">
-            <label>Autoroute (km)</label>
+            <label>{t.highwayKm}</label>
             <input type="number" min="0" step="500" value={kmHighway}
               onChange={(e) => setKmHighway(parseInt(e.target.value) || 0)} />
           </div>
         </div>
-
       </div>
 
-      
-
       <div className="vehicles-grid">
-        <VehicleForm title="Véhicule actuel" type={oldType} data={oldCar} setData={setOldCar} />
-        <VehicleForm title="Nouveau véhicule" type={newType} data={newCar} setData={setNewCar} />
+        <VehicleForm title={t.currentVehicle} type={oldType} data={oldCar} setData={setOldCar} />
+        <VehicleForm title={t.newVehicle} type={newType} data={newCar} setData={setNewCar} />
       </div>
 
       <FinancingForm data={finance} setData={setFinance} />
 
       <button className="btn-calculate" onClick={() => setShowResults(true)}>
-        Calculer
+        {t.calculate}
       </button>
 
       {showResults && (
@@ -125,6 +106,9 @@ export default function App() {
         />
       )}
 
+      <footer className="app-footer">
+        {t.copyright(new Date().getFullYear())}
+      </footer>
     </div>
   );
 }

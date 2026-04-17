@@ -9,6 +9,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { getDepreciationCurve } from "../utils/calculations";
+import { useT } from "../i18n";
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -25,6 +26,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function DepreciationChart({ oldCar, newCar, kmCity, kmHighway, finance }) {
+  const t = useT();
   const annualKm = (kmCity || 0) + (kmHighway || 0);
   const currentYear = new Date().getFullYear();
 
@@ -36,15 +38,17 @@ export default function DepreciationChart({ oldCar, newCar, kmCity, kmHighway, f
 
   if (!oldCurve.length && !newCurve.length) return null;
 
-  // Fusionner les deux courbes sur un axe années commun
+  const oldLabel = t.oldVehicle;
+  const newLabel = t.newVehicle;
+
   const allYears = [...new Set([...oldCurve.map(p => p.year), ...newCurve.map(p => p.year)])].sort();
   const oldByYear = Object.fromEntries(oldCurve.map(p => [p.year, p]));
   const newByYear = Object.fromEntries(newCurve.map(p => [p.year, p]));
 
   const data = allYears.map(year => ({
     year,
-    "Ancien véhicule": oldByYear[year]?.value ?? null,
-    "Nouveau véhicule": newByYear[year]?.value ?? null,
+    [oldLabel]: oldByYear[year]?.value ?? null,
+    [newLabel]: newByYear[year]?.value ?? null,
   }));
 
   const oldPurchaseYear = oldCurve.find(p => p.isPurchase)?.year;
@@ -52,9 +56,9 @@ export default function DepreciationChart({ oldCar, newCar, kmCity, kmHighway, f
 
   return (
     <div className="card">
-      <h2>Décote des véhicules</h2>
+      <h2>{t.depreciationTitle}</h2>
       <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
-        Valeur estimée selon le type, l'âge et le kilométrage. Ligne pointillée = aujourd'hui.
+        {t.depreciationDesc}
       </p>
 
       <ResponsiveContainer width="100%" height={280}>
@@ -66,16 +70,14 @@ export default function DepreciationChart({ oldCar, newCar, kmCity, kmHighway, f
           <ReferenceLine x={currentYear} stroke="#94a3b8" strokeDasharray="4 4" />
           {oldPurchaseYear && oldPurchaseYear !== (oldCar.year || currentYear) && (
             <ReferenceLine x={oldPurchaseYear} stroke="#10b981" strokeDasharray="3 3" strokeOpacity={0.6}
-              label={{ value: "Achat", fontSize: 11, fill: "#10b981", position: "top" }} />
+              label={{ value: t.purchase, fontSize: 11, fill: "#10b981", position: "top" }} />
           )}
           {newPurchaseYear && newPurchaseYear !== (newCar.year || currentYear) && (
             <ReferenceLine x={newPurchaseYear} stroke="#3b82f6" strokeDasharray="3 3" strokeOpacity={0.6}
-              label={{ value: "Achat", fontSize: 11, fill: "#3b82f6", position: "top" }} />
+              label={{ value: t.purchase, fontSize: 11, fill: "#3b82f6", position: "top" }} />
           )}
-          <Line type="monotone" dataKey="Ancien véhicule" stroke="#10b981" strokeWidth={2}
-            dot={false} connectNulls />
-          <Line type="monotone" dataKey="Nouveau véhicule" stroke="#3b82f6" strokeWidth={2}
-            dot={false} connectNulls />
+          <Line type="monotone" dataKey={oldLabel} stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
+          <Line type="monotone" dataKey={newLabel} stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
         </LineChart>
       </ResponsiveContainer>
     </div>

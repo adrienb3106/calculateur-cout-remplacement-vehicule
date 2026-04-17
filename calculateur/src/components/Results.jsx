@@ -14,6 +14,7 @@ import {
   getTotalUsageCost,
   getFinancing,
 } from "../utils/calculations";
+import { useT } from "../i18n";
 
 const fmt = (v) => (Number.isFinite(v) ? v.toFixed(2) : "—");
 
