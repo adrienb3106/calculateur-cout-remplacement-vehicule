@@ -416,3 +416,212 @@ input[type="range"] {
     font-size: 12px;
   }
 }
+/* ===== Page tabs ===== */
+.page-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.page-tab {
+  flex: 1;
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s;
+}
+
+.page-tab:hover {
+  color: #1e293b;
+}
+
+.page-tab.active {
+  background: white;
+  color: #3b82f6;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* ===== Trip comparison page ===== */
+.trip-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+  margin-bottom: 16px;
+}
+
+.trip-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.trip-thermal-result,
+.trip-ev-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.trip-thermal-label {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.trip-thermal-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.trip-sub-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.trip-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 14px;
+}
+
+.trip-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.trip-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 580px;
+}
+
+.trip-table th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #1e293b;
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.trip-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.trip-table tr:last-child td {
+  border-bottom: none;
+}
+
+.trip-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.trip-op-name {
+  font-weight: 600;
+  color: #1e293b;
+  min-width: 140px;
+}
+
+.trip-op-note {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.trip-center { text-align: center; }
+.trip-right { text-align: right; }
+.trip-dim { color: #94a3b8; font-size: 12px; }
+.trip-kwh { color: #475569; font-weight: 600; }
+.trip-cost { font-weight: 700; color: #1e293b; }
+
+.trip-free {
+  color: #10b981;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.trip-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.trip-badge-good {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.trip-badge-bad {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.trip-badge-neutral {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.trip-row-thermal td {
+  background: #fefce8;
+  border-top: 2px solid #fde68a;
+}
+
+.trip-row-thermal:hover td {
+  background: #fef9c3 !important;
+}
+
+.trip-disclaimer {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 12px 0 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .trip-inputs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-sub-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .page-tabs {
+    max-width: 100%;
+  }
+}
