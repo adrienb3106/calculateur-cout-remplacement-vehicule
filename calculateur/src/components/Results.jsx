@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -14,7 +15,6 @@ import {
   getTotalUsageCost,
   getFinancing,
 } from "../utils/calculations";
-import { useT } from "../i18n";
 
 const fmt = (v) => (Number.isFinite(v) ? v.toFixed(2) : "—");
 
@@ -41,7 +41,23 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+const cumulTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 14px" }}>
+      <p style={{ fontWeight: 600, marginBottom: 6 }}>{label}</p>
+      {payload.map((p) => (
+        <p key={p.name} style={{ color: p.stroke, margin: "2px 0" }}>
+          {p.name} : {p.value.toLocaleString("fr-FR")} €
+        </p>
+      ))}
+    </div>
+  );
+};
+
 export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) {
+  const [showCumul, setShowCumul] = useState(false);
+
   const oldCost = getTotalUsageCost(oldCar, kmCity, kmHighway);
   const newCost = getTotalUsageCost(newCar, kmCity, kmHighway);
   const financing = getFinancing(finance);
@@ -60,57 +76,43 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
       Carburant: oldCost.fuel / 12,
       Entretien: oldCost.maintenance / 12,
       Prêt: 0,
-      Borne: 0,
     },
     {
       name: "Nouveau (avec prêt)",
       Carburant: newCost.fuel / 12,
       Entretien: newCost.maintenance / 12,
       Prêt: financing.monthlyLoan,
-      Borne: 0,
     },
     {
       name: "Nouveau (après prêt)",
       Carburant: newCost.fuel / 12,
       Entretien: newCost.maintenance / 12,
       Prêt: 0,
-      Borne: 0,
     },
   ];
 
   const loanMonths = finance.duration || 0;
   const maxYears = Math.max(Math.ceil(loanMonths / 12) + 5, 10);
 
-  const smoothedData = Array.from({ length: maxYears }, (_, i) => {
+  const cumulData = Array.from({ length: maxYears }, (_, i) => {
     const year = i + 1;
     const months = year * 12;
-    const activeLoan = Math.min(months, loanMonths);
-    const smoothedNew = newCost.monthly + (activeLoan / months) * financing.monthlyLoan + charger / months;
+    const activeLoanMonths = Math.min(months, loanMonths);
+    const cumOld = Math.round(months * oldCost.monthly);
+    const cumNew = Math.round(
+      activeLoanMonths * (newCost.monthly + financing.monthlyLoan) +
+      Math.max(0, months - loanMonths) * newCost.monthly +
+      charger
+    );
     return {
       name: `${year} an${year > 1 ? "s" : ""}`,
-      "Nouveau véhicule": Math.round(smoothedNew * 100) / 100,
-      "Ancien véhicule": Math.round(oldCost.monthly * 100) / 100,
+      "Ancien véhicule": cumOld,
+      "Nouveau véhicule": cumNew,
     };
   });
 
-  const breakevenEntry = smoothedData.find(
-    (d) => d["Nouveau véhicule"] <= d["Ancien véhicule"]
-  );
-  const breakevenName = breakevenEntry?.name;
-
-  const smoothedTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 14px" }}>
-        <p style={{ fontWeight: 600, marginBottom: 6 }}>{label}</p>
-        {payload.map((p) => (
-          <p key={p.name} style={{ color: p.stroke, margin: "2px 0" }}>
-            {p.name} : {p.value.toFixed(2)} €/mois
-          </p>
-        ))}
-      </div>
-    );
-  };
+  const cumulBreakeven = cumulData.find(d => d["Nouveau véhicule"] <= d["Ancien véhicule"]);
+  const loanEndLabel = `${Math.ceil(loanMonths / 12)} an${Math.ceil(loanMonths / 12) > 1 ? "s" : ""}`;
 
   return (
     <div className="card result">
@@ -183,46 +185,68 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
         </BarChart>
       </ResponsiveContainer>
 
-      <h3 style={{ marginTop: 32, marginBottom: 4 }}>Coût mensuel lissé dans le temps</h3>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-          Coût moyen mensuel en tenant compte du prêt ({finance.duration || 0} mois).
-        </p>
-        {breakevenName ? (
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#10b981", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "3px 10px" }}>
-            Rentable dès {breakevenName}
-          </span>
-        ) : (
-          <span style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "3px 10px" }}>
-            Non rentable sur la période
-          </span>
+      <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 8, paddingTop: 16 }}>
+        <button className="collapsible-header" onClick={() => setShowCumul(!showCumul)}>
+          <h3 className="collapsible-title">Coût total cumulé</h3>
+          {!showCumul && cumulBreakeven && (
+            <span className="collapsible-badge badge-green">
+              Rentable dès {cumulBreakeven.name}
+            </span>
+          )}
+          {!showCumul && !cumulBreakeven && loanMonths > 0 && (
+            <span className="collapsible-badge badge-red">
+              Non rentable sur la période
+            </span>
+          )}
+          <span className="collapsible-arrow">{showCumul ? "▲" : "▼"}</span>
+        </button>
+
+        {showCumul && (
+          <>
+            <p style={{ fontSize: 13, color: "#64748b", margin: "8px 0 16px" }}>
+              Argent total dépensé depuis l'achat — comparer garder l'ancien véhicule vs acquérir le nouveau.
+            </p>
+            <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+              {cumulBreakeven ? (
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#10b981", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "3px 10px" }}>
+                  Rentable dès {cumulBreakeven.name}
+                </span>
+              ) : loanMonths > 0 ? (
+                <span style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "3px 10px" }}>
+                  Non rentable sur la période
+                </span>
+              ) : null}
+            </div>
+
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={cumulData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k€`} tick={{ fontSize: 12 }} />
+                <Tooltip content={cumulTooltip} />
+                <Legend />
+                {loanMonths > 0 && (
+                  <ReferenceLine
+                    x={loanEndLabel}
+                    stroke="#f59e0b"
+                    strokeDasharray="4 4"
+                    label={{ value: "Fin du prêt", fontSize: 11, fill: "#f59e0b", position: "insideTopRight" }}
+                  />
+                )}
+                {cumulBreakeven && (
+                  <ReferenceLine
+                    x={cumulBreakeven.name}
+                    stroke="#10b981"
+                    strokeDasharray="4 4"
+                    label={{ value: "Seuil", fontSize: 11, fill: "#10b981", position: "insideTopLeft" }}
+                  />
+                )}
+                <Line type="monotone" dataKey="Nouveau véhicule" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Ancien véhicule" stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+              </LineChart>
+            </ResponsiveContainer>
+          </>
         )}
       </div>
-
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={smoothedData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis tickFormatter={(v) => `${v} €`} tick={{ fontSize: 12 }} />
-          <Tooltip content={smoothedTooltip} />
-          <Legend />
-          <ReferenceLine
-            x={`${Math.ceil((finance.duration || 0) / 12)} an${Math.ceil((finance.duration || 0) / 12) > 1 ? "s" : ""}`}
-            stroke="#f59e0b"
-            strokeDasharray="4 4"
-            label={{ value: "Fin du prêt", fontSize: 11, fill: "#f59e0b", position: "insideTopRight" }}
-          />
-          {breakevenName && (
-            <ReferenceLine
-              x={breakevenName}
-              stroke="#10b981"
-              strokeDasharray="4 4"
-              label={{ value: "Seuil", fontSize: 11, fill: "#10b981", position: "insideTopLeft" }}
-            />
-          )}
-          <Line type="monotone" dataKey="Nouveau véhicule" stroke="#3b82f6" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="Ancien véhicule" stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-        </LineChart>
-      </ResponsiveContainer>
     </div>
   );
 }

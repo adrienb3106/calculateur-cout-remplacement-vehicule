@@ -1,4 +1,11 @@
 import { useState, useEffect } from "react";
+import { getTotalUsageCost } from "./utils/calculations";
+import VehicleForm from "./components/VehicleForm";
+import FinancingForm from "./components/FinancingForm";
+import Results from "./components/Results";
+import DepreciationChart from "./components/DepreciationChart";
+import { useT } from "./i18n";
+import "./style.css";
 
 function load(key, fallback) {
   try {
@@ -12,12 +19,6 @@ function load(key, fallback) {
 function save(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
-import VehicleForm from "./components/VehicleForm";
-import FinancingForm from "./components/FinancingForm";
-import Results from "./components/Results";
-import DepreciationChart from "./components/DepreciationChart";
-import { useT } from "./i18n";
-import "./style.css";
 
 export default function App() {
   const t = useT();
@@ -78,12 +79,17 @@ export default function App() {
         <VehicleForm title={t.newVehicle} type={newType} data={newCar} setData={setNewCar} />
       </div>
 
-      <FinancingForm data={finance} setData={setFinance} />
+      <FinancingForm
+        data={finance}
+        setData={setFinance}
+        purchasePrice={newCar.purchasePrice}
+        oldMonthly={getTotalUsageCost({ ...oldCar, type: oldType }, kmCity, kmHighway).monthly}
+      />
 
       <Results
         oldCar={{ ...oldCar, type: oldType }}
         newCar={{ ...newCar, type: newType }}
-        finance={finance}
+        finance={{ ...finance, price: newCar.purchasePrice }}
         kmCity={kmCity}
         kmHighway={kmHighway}
       />
@@ -93,7 +99,7 @@ export default function App() {
         newCar={{ ...newCar, type: newType }}
         kmCity={kmCity}
         kmHighway={kmHighway}
-        finance={finance}
+        finance={{ ...finance, price: newCar.purchasePrice }}
       />
 
       <footer className="app-footer">

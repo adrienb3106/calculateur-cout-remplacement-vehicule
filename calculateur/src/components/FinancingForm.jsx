@@ -26,8 +26,8 @@ function Field({ label, value, onChange }) {
   );
 }
 
-function PriceBreakdown({ data, t }) {
-  const price = parseFloat(data.price) || 0;
+function PriceBreakdown({ data, purchasePrice, t }) {
+  const price = parseFloat(purchasePrice) || 0;
   if (!price) return null;
 
   const steps = [];
@@ -75,15 +75,25 @@ function PriceBreakdown({ data, t }) {
   );
 }
 
-export default function FinancingForm({ data, setData }) {
+export default function FinancingForm({ data, setData, purchasePrice, oldMonthly }) {
   const t = useT();
   const [showBudget, setShowBudget] = useState(false);
+  const [budgetMode, setBudgetMode] = useState("monthly");
+
   const [targetMonthly, setTargetMonthly] = useState(0);
   const [targetRaw, setTargetRaw] = useState("");
   const [targetError, setTargetError] = useState(false);
 
-  const maxPrice = showBudget && targetMonthly
-    ? getMaxPrice(targetMonthly, data.rate || 0, data.duration || 0, data)
+  const [maxDiff, setMaxDiff] = useState(0);
+  const [diffRaw, setDiffRaw] = useState("");
+  const [diffError, setDiffError] = useState(false);
+
+  const effectiveTarget = budgetMode === "monthly"
+    ? targetMonthly
+    : (oldMonthly || 0) + maxDiff;
+
+  const maxPrice = showBudget && effectiveTarget
+    ? getMaxPrice(effectiveTarget, data.rate || 0, data.duration || 0, data)
     : null;
 
   return (
@@ -92,8 +102,6 @@ export default function FinancingForm({ data, setData }) {
 
       <p className="section-label">{t.priceReductions}</p>
       <div className="finance-grid">
-        <Field label={t.vehiclePrice} value={data.price}
-          onChange={(num) => setData({ ...data, price: num })} />
         <Field label={t.negotiation} value={data.negotiation}
           onChange={(num) => setData({ ...data, negotiation: num })} />
         <Field label={t.downPayment} value={data.apport}
@@ -116,7 +124,7 @@ export default function FinancingForm({ data, setData }) {
         )}
       </div>
 
-      <PriceBreakdown data={data} t={t} />
+      <PriceBreakdown data={data} purchasePrice={purchasePrice} t={t} />
 
       <div className="field-divider" />
 
@@ -152,27 +160,76 @@ export default function FinancingForm({ data, setData }) {
 
       {showBudget && (
         <div style={{ marginTop: 10 }}>
-          <div className="field-col" style={{ maxWidth: 220 }}>
-            <label className="field-col-label">{t.targetMonthly}</label>
-            <input
-              type="text"
-              value={targetRaw}
-              onChange={(e) => {
-                const input = e.target.value;
-                const normalized = input.replace(/,/g, ".");
-                setTargetRaw(input);
-                const num = parseFloat(normalized);
-                if (isNaN(num)) { setTargetError(true); setTargetMonthly(0); }
-                else { setTargetError(false); setTargetMonthly(num); }
-              }}
-              className={targetError ? "field-input-error" : ""}
-            />
-            {targetError && <span className="field-error-msg">Valeur invalide</span>}
+          <div className="toggle-group" style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              className={budgetMode === "monthly" ? "toggle active" : "toggle"}
+              onClick={() => setBudgetMode("monthly")}
+            >
+              {t.budgetModeMonthly}
+            </button>
+            <button
+              type="button"
+              className={budgetMode === "diff" ? "toggle active" : "toggle"}
+              onClick={() => setBudgetMode("diff")}
+            >
+              {t.budgetModeDiff}
+            </button>
           </div>
+
+          {budgetMode === "monthly" && (
+            <div className="field-col" style={{ maxWidth: 220 }}>
+              <label className="field-col-label">{t.targetMonthly}</label>
+              <input
+                type="text"
+                value={targetRaw}
+                onChange={(e) => {
+                  const input = e.target.value;
+                  const normalized = input.replace(/,/g, ".");
+                  setTargetRaw(input);
+                  const num = parseFloat(normalized);
+                  if (isNaN(num)) { setTargetError(true); setTargetMonthly(0); }
+                  else { setTargetError(false); setTargetMonthly(num); }
+                }}
+                className={targetError ? "field-input-error" : ""}
+              />
+              {targetError && <span className="field-error-msg">Valeur invalide</span>}
+            </div>
+          )}
+
+          {budgetMode === "diff" && (
+            <div className="field-col" style={{ maxWidth: 220 }}>
+              <label className="field-col-label">{t.targetDiffLabel}</label>
+              <input
+                type="text"
+                value={diffRaw}
+                onChange={(e) => {
+                  const input = e.target.value;
+                  const normalized = input.replace(/,/g, ".");
+                  setDiffRaw(input);
+                  const num = parseFloat(normalized);
+                  if (isNaN(num)) { setDiffError(true); setMaxDiff(0); }
+                  else { setDiffError(false); setMaxDiff(num); }
+                }}
+                className={diffError ? "field-input-error" : ""}
+              />
+              {diffError && <span className="field-error-msg">Valeur invalide</span>}
+              {oldMonthly > 0 && (diffRaw !== "") && !diffError && (
+                <span style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
+                  {t.effectiveTarget((oldMonthly + maxDiff).toFixed(0))}
+                </span>
+              )}
+            </div>
+          )}
+
           {maxPrice !== null && (
             <div className="budget-max-result">
               <span className="budget-max-price">{t.maxPriceResult(maxPrice)}</span>
-              <span className="budget-max-hint">{t.maxPriceHint}</span>
+              <span className="budget-max-hint">
+                {budgetMode === "diff" && oldMonthly > 0
+                  ? t.maxPriceHintDiff((oldMonthly + maxDiff).toFixed(0))
+                  : t.maxPriceHint}
+              </span>
             </div>
           )}
         </div>

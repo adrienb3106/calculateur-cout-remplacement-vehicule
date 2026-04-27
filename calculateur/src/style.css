@@ -416,6 +416,63 @@ input[type="range"] {
     font-size: 12px;
   }
 }
+/* ===== Collapsible sections ===== */
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.collapsible-header:hover .collapsible-arrow {
+  color: #475569;
+}
+
+.collapsible-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.collapsible-arrow {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: normal;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.collapsible-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.badge-green {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.badge-red {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
 /* ===== Page tabs ===== */
 .page-tabs {
   display: flex;
