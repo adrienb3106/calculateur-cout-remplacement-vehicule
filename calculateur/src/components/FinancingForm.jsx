@@ -75,7 +75,7 @@ function PriceBreakdown({ data, purchasePrice, t }) {
   );
 }
 
-export default function FinancingForm({ data, setData, purchasePrice, oldMonthly }) {
+export default function FinancingForm({ data, setData, purchasePrice, oldMonthly, newMonthly }) {
   const t = useT();
   const [showBudget, setShowBudget] = useState(false);
   const [budgetMode, setBudgetMode] = useState("monthly");
@@ -90,7 +90,7 @@ export default function FinancingForm({ data, setData, purchasePrice, oldMonthly
 
   const effectiveTarget = budgetMode === "monthly"
     ? targetMonthly
-    : (oldMonthly || 0) + maxDiff;
+    : Math.max(0, (oldMonthly || 0) + maxDiff - (newMonthly || 0));
 
   const maxPrice = showBudget && effectiveTarget
     ? getMaxPrice(effectiveTarget, data.rate || 0, data.duration || 0, data)
@@ -217,6 +217,7 @@ export default function FinancingForm({ data, setData, purchasePrice, oldMonthly
               {oldMonthly > 0 && (diffRaw !== "") && !diffError && (
                 <span style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
                   {t.effectiveTarget((oldMonthly + maxDiff).toFixed(0))}
+                  {" — "}{t.targetLoanPayment(Math.max(0, oldMonthly + maxDiff - (newMonthly || 0)).toFixed(0))}
                 </span>
               )}
             </div>

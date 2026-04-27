@@ -84,6 +84,7 @@ export default function App() {
         setData={setFinance}
         purchasePrice={newCar.purchasePrice}
         oldMonthly={getTotalUsageCost({ ...oldCar, type: oldType }, kmCity, kmHighway).monthly}
+        newMonthly={getTotalUsageCost({ ...newCar, type: newType }, kmCity, kmHighway).monthly}
       />
 
       <Results

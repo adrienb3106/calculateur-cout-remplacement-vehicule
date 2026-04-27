@@ -92,18 +92,46 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
   ];
 
   const loanMonths = finance.duration || 0;
-  const maxYears = Math.max(Math.ceil(loanMonths / 12) + 5, 10);
+  const SEARCH_HORIZON = 25;
+  // Maintenance de l'ancien véhicule thermique augmente de 6%/an
+  const OLD_MAINT_GROWTH = oldCar.type === "thermal" ? 0.06 : 0;
+
+  function calcCumul(year) {
+    const months = year * 12;
+    const activeLoanMonths = Math.min(months, loanMonths);
+    let cumOld = 0;
+    const fuelMonthlyOld = oldCost.fuel / 12;
+    const baseMaintenanceMonthlyOld = oldCost.maintenance / 12;
+    for (let y = 1; y <= year; y++) {
+      const yearlyMaint = baseMaintenanceMonthlyOld * 12 * Math.pow(1 + OLD_MAINT_GROWTH, y - 1);
+      cumOld += 12 * fuelMonthlyOld + yearlyMaint;
+    }
+    const cumNew =
+      activeLoanMonths * (newCost.monthly + financing.monthlyLoan) +
+      Math.max(0, months - loanMonths) * newCost.monthly +
+      charger;
+    return { cumOld: Math.round(cumOld), cumNew: Math.round(cumNew) };
+  }
+
+  // Chercher le break-even sur 25 ans
+  let cumulBreakevenYear = null;
+  for (let y = 1; y <= SEARCH_HORIZON; y++) {
+    const { cumOld, cumNew } = calcCumul(y);
+    if (cumNew <= cumOld) { cumulBreakevenYear = y; break; }
+  }
+
+  const cumulBreakeven = cumulBreakevenYear
+    ? `${cumulBreakevenYear} an${cumulBreakevenYear > 1 ? "s" : ""}`
+    : null;
+
+  const maxYears = Math.min(
+    SEARCH_HORIZON,
+    Math.max(Math.ceil(loanMonths / 12) + 5, cumulBreakevenYear ? cumulBreakevenYear + 2 : 10, 10)
+  );
 
   const cumulData = Array.from({ length: maxYears }, (_, i) => {
     const year = i + 1;
-    const months = year * 12;
-    const activeLoanMonths = Math.min(months, loanMonths);
-    const cumOld = Math.round(months * oldCost.monthly);
-    const cumNew = Math.round(
-      activeLoanMonths * (newCost.monthly + financing.monthlyLoan) +
-      Math.max(0, months - loanMonths) * newCost.monthly +
-      charger
-    );
+    const { cumOld, cumNew } = calcCumul(year);
     return {
       name: `${year} an${year > 1 ? "s" : ""}`,
       "Ancien véhicule": cumOld,
@@ -111,7 +139,6 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
     };
   });
 
-  const cumulBreakeven = cumulData.find(d => d["Nouveau véhicule"] <= d["Ancien véhicule"]);
   const loanEndLabel = `${Math.ceil(loanMonths / 12)} an${Math.ceil(loanMonths / 12) > 1 ? "s" : ""}`;
 
   return (
@@ -190,12 +217,12 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
           <h3 className="collapsible-title">Coût total cumulé</h3>
           {!showCumul && cumulBreakeven && (
             <span className="collapsible-badge badge-green">
-              Rentable dès {cumulBreakeven.name}
+              Rentable dès {cumulBreakeven}
             </span>
           )}
           {!showCumul && !cumulBreakeven && loanMonths > 0 && (
             <span className="collapsible-badge badge-red">
-              Non rentable sur la période
+              Rentable après {SEARCH_HORIZON} ans
             </span>
           )}
           <span className="collapsible-arrow">{showCumul ? "▲" : "▼"}</span>
@@ -209,11 +236,11 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
             <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
               {cumulBreakeven ? (
                 <span style={{ fontSize: 13, fontWeight: 600, color: "#10b981", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "3px 10px" }}>
-                  Rentable dès {cumulBreakeven.name}
+                  Rentable dès {cumulBreakeven}
                 </span>
               ) : loanMonths > 0 ? (
                 <span style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "3px 10px" }}>
-                  Non rentable sur la période
+                  Rentable après {SEARCH_HORIZON} ans (hors hausse entretien)
                 </span>
               ) : null}
             </div>
@@ -234,7 +261,7 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
                 )}
                 {cumulBreakeven && (
                   <ReferenceLine
-                    x={cumulBreakeven.name}
+                    x={cumulBreakeven}
                     stroke="#10b981"
                     strokeDasharray="4 4"
                     label={{ value: "Seuil", fontSize: 11, fill: "#10b981", position: "insideTopLeft" }}
