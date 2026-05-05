@@ -208,13 +208,14 @@ export default function ChargingAnalysis({
   const [vehicleSource, setVehicleSource] = useState(() => load("charging_vehicle_source", defaultChoice));
   const [weeklyKm, setWeeklyKm] = useState(() => load("charging_weekly_km", defaultWeeklyKm));
   const [evConsumption, setEvConsumption] = useState(() => load("charging_ev_consumption", 18));
-  const [offPeakShare, setOffPeakShare] = useState(() => load("charging_off_peak_share", 80));
+  const [offPeakShare, setOffPeakShare] = useState(() => load("charging_off_peak_share", 90));
   const [horizonMonths, setHorizonMonths] = useState(() => load("charging_horizon_months", 36));
   const [chargerTiming, setChargerTiming] = useState(() => load("charging_charger_timing", "after"));
   const [includeCharger, setIncludeCharger] = useState(() => load("charging_include_charger", true));
   const [individualTariff, setIndividualTariff] = useState(() => load("charging_individual_tariff", 0.2));
   const [individualChargerCost, setIndividualChargerCost] = useState(() => load("charging_individual_charger_cost", 0));
-  const [excludeIndividualFromBestOffer, setExcludeIndividualFromBestOffer] = useState(() => load("charging_exclude_individual", false));
+  const [excludeIndividualFromBestOffer, setExcludeIndividualFromBestOffer] = useState(() => load("charging_exclude_individual", true));
+  const [showIndividualReference, setShowIndividualReference] = useState(() => load("charging_show_individual_reference", false));
   const [selectedOfferId, setSelectedOfferId] = useState(() => load("charging_offer_id", ""));
   const [comparisonMode, setComparisonMode] = useState(() => load("charging_comparison_mode", "full"));
 
@@ -260,6 +261,7 @@ export default function ChargingAnalysis({
   useEffect(() => { save("charging_individual_tariff", individualTariff); }, [individualTariff]);
   useEffect(() => { save("charging_individual_charger_cost", individualChargerCost); }, [individualChargerCost]);
   useEffect(() => { save("charging_exclude_individual", excludeIndividualFromBestOffer); }, [excludeIndividualFromBestOffer]);
+  useEffect(() => { save("charging_show_individual_reference", showIndividualReference); }, [showIndividualReference]);
   useEffect(() => { save("charging_offer_id", selectedOfferId); }, [selectedOfferId]);
   useEffect(() => { save("charging_comparison_mode", comparisonMode); }, [comparisonMode]);
 
@@ -357,7 +359,7 @@ export default function ChargingAnalysis({
       solutionLabel: "Référence · Borne individuelle",
       solutionType: "individual",
       eligibleForBestOffer: !excludeIndividualFromBestOffer,
-      notes: "Tarif copropriété saisi dans la page 2",
+      notes: "Raccordement au compteur général",
       hc_price_eur_per_kwh: safe(individualTariff),
       hp_price_eur_per_kwh: safe(individualTariff),
       blendedPrice: safe(individualTariff),
@@ -558,29 +560,41 @@ export default function ChargingAnalysis({
 
         <div className="field-divider" />
 
-        <p className="section-label">Solution de référence : borne individuelle</p>
-        <div className="charging-grid">
-          <NumberField
-            label="Tarif kWh copropriété"
-            value={individualTariff}
-            onChange={setIndividualTariff}
-          />
-          <NumberField
-            label="Prix de la borne à l'installation"
-            value={individualChargerCost}
-            onChange={setIndividualChargerCost}
-            hint="Montant net, aides déduites"
-          />
-        </div>
+        <button
+          type="button"
+          className="collapsible-header"
+          onClick={() => setShowIndividualReference((current) => !current)}
+        >
+          <h3 className="collapsible-title">Solution de référence : borne individuelle</h3>
+          <span className="collapsible-arrow">{showIndividualReference ? "▲" : "▼"}</span>
+        </button>
 
-        <label className="charging-checkbox" style={{ marginTop: 10 }}>
-          <input
-            type="checkbox"
-            checked={excludeIndividualFromBestOffer}
-            onChange={(event) => setExcludeIndividualFromBestOffer(event.target.checked)}
-          />
-          Exclure la borne individuelle du choix de la meilleure solution
-        </label>
+        {showIndividualReference && (
+          <div className="charging-collapsible-content">
+            <div className="charging-grid">
+              <NumberField
+                label="Tarif kWh copropriété"
+                value={individualTariff}
+                onChange={setIndividualTariff}
+              />
+              <NumberField
+                label="Prix de la borne à l'installation"
+                value={individualChargerCost}
+                onChange={setIndividualChargerCost}
+                hint="Montant net, aides déduites"
+              />
+            </div>
+
+            <label className="charging-checkbox" style={{ marginTop: 10 }}>
+              <input
+                type="checkbox"
+                checked={excludeIndividualFromBestOffer}
+                onChange={(event) => setExcludeIndividualFromBestOffer(event.target.checked)}
+              />
+              Exclure la borne individuelle du choix de la meilleure solution
+            </label>
+          </div>
+        )}
 
         <div className="field-divider" />
 
@@ -593,14 +607,14 @@ export default function ChargingAnalysis({
                 className={chargerTiming === "before" ? "toggle active" : "toggle"}
                 onClick={() => setChargerTiming("before")}
               >
-                Avant installation
+                Tarif préférentiel à l'installation collective
               </button>
               <button
                 type="button"
                 className={chargerTiming === "after" ? "toggle active" : "toggle"}
                 onClick={() => setChargerTiming("after")}
               >
-                Après installation
+                Tarif après installation collective
               </button>
             </div>
           </div>
@@ -694,7 +708,7 @@ export default function ChargingAnalysis({
                     <td className="trip-right">
                       {includeCharger ? formatCompactCurrency(offer.chargerPrice) : "Hors calcul"}
                       {includeCharger && !offer.chargerPriceExact && (
-                        <span className="trip-op-note">prix voisin utilisé faute de valeur exacte</span>
+                        <span className="trip-op-note"></span>
                       )}
                     </td>
                     <td className="trip-right trip-cost">{formatCurrency(offer.chargingMonthly)}</td>

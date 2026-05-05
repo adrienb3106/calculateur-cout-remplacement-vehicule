@@ -765,6 +765,10 @@ input[type="range"] {
   gap: 12px 20px;
 }
 
+.charging-collapsible-content {
+  margin-top: 12px;
+}
+
 .charging-warning-box {
   margin: 0 0 14px;
   padding: 12px 14px;
