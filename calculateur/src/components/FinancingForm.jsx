@@ -139,20 +139,6 @@ export default function FinancingForm({ data, setData, purchasePrice, oldMonthly
       <div className="field-divider" />
 
       <div className="finance-reprise">
-        <label className="field-col-label">{t.charger}</label>
-        <input type="checkbox" checked={data.withCharger || false}
-          onChange={(e) => setData({ ...data, withCharger: e.target.checked })} />
-        {data.withCharger && (
-          <div style={{ flex: 1 }}>
-            <Field label={t.chargerCost} value={data.chargerCost}
-              onChange={(num) => setData({ ...data, chargerCost: num })} />
-          </div>
-        )}
-      </div>
-
-      <div className="field-divider" />
-
-      <div className="finance-reprise">
         <label className="field-col-label">{t.budgetMax}</label>
         <input type="checkbox" checked={showBudget}
           onChange={(e) => setShowBudget(e.target.checked)} />

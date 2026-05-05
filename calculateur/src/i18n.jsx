@@ -43,7 +43,7 @@ const fr = {
   loanDuration: "Durée (mois)",
   interestRate: "Taux d'intérêt (%)",
   charger: "Borne de recharge ?",
-  chargerCost: "Coût installation (€)",
+  chargerCost: "Coût installation borne (€)",
   budgetMax: "Calculer mon budget max",
   budgetModeMonthly: "Mensualité cible",
   budgetModeDiff: "Différence vs ancien",

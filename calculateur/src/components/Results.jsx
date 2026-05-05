@@ -69,7 +69,9 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
 
   const diff = totalNewWithLoan - totalOld;
   const diffAfter = totalNewAfterLoan - totalOld;
-  const charger = financing.chargerCost || 0;
+  const charger = newCar.type === "electric" && newCar.chargingSetup === "individual"
+    ? (Number(newCar.chargerCost) || 0)
+    : 0;
   const hasChargingSubscription = oldCost.chargingSubscription > 0 || newCost.chargingSubscription > 0;
 
   const chartData = [
@@ -224,11 +226,11 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
           <Tooltip content={<CustomTooltip />} />
           <Legend />
           <Bar dataKey="Carburant" stackId="a" fill={COLORS.fuel} barSize={40} />
+          <Bar dataKey="Prêt" stackId="a" fill={COLORS.loan} barSize={40} />
           {hasChargingSubscription && (
             <Bar dataKey="Abonnement" stackId="a" fill={COLORS.subscription} barSize={40} />
           )}
           <Bar dataKey="Entretien" stackId="a" fill={COLORS.maintenance} barSize={40} />
-          <Bar dataKey="Prêt" stackId="a" fill={COLORS.loan} barSize={40} radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
 

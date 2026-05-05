@@ -279,11 +279,8 @@ export function getFinancing(data) {
     safe(data.duration)
   );
 
-  const chargerCost = data.withCharger ? safe(data.chargerCost) : 0;
-
   return {
     finalPrice: price,
     monthlyLoan,
-    chargerCost,
   };
 }
