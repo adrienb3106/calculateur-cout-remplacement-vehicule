@@ -29,8 +29,8 @@ export default function App() {
   const [oldType, setOldType] = useState(() => load("oldType", "thermal"));
   const [newType, setNewType] = useState(() => load("newType", "electric"));
   const [finance, setFinance] = useState(() => load("finance", {}));
-  const [kmCity, setKmCity] = useState(() => load("kmCity", 5000));
-  const [kmHighway, setKmHighway] = useState(() => load("kmHighway", 5000));
+  const [kmCity, setKmCity] = useState(() => load("kmCity", 6000));
+  const [kmHighway, setKmHighway] = useState(() => load("kmHighway", 0));
 
   useEffect(() => { save("oldCar", oldCar); }, [oldCar]);
   useEffect(() => { save("newCar", newCar); }, [newCar]);

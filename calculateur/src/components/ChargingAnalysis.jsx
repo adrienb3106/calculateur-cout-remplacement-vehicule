@@ -192,7 +192,7 @@ export default function ChargingAnalysis({
   kmHighway,
 }) {
   const annualKmFromApp = safe(kmCity) + safe(kmHighway);
-  const defaultWeeklyKm = annualKmFromApp ? round(annualKmFromApp / 52, 0) : 250;
+  const defaultWeeklyKm = annualKmFromApp ? round(annualKmFromApp / 52, 0) : round(6000 / 52, 0);
   const vehicleChoices = useMemo(
     () => getVehicleChoices(oldCar, newCar, oldType, newType),
     [oldCar, newCar, oldType, newType]
@@ -680,12 +680,18 @@ export default function ChargingAnalysis({
               <span className="charging-summary-sub">
                 Énergie + abonnement + borne amortie sur {effectiveMonths} mois
               </span>
+              <span className="charging-summary-sub">
+                La borne est lissée sur {effectiveMonths} mois dans ce calcul.
+              </span>
             </div>
             <div className="charging-summary-card">
               <span className="charging-summary-label">Usage VE / mois</span>
               <strong>{formatCurrency(summaryOffer.usageMonthly)}</strong>
               <span className="charging-summary-sub">
                 Recharge lisse + entretien
+              </span>
+              <span className="charging-summary-sub">
+                Calcul limité aux trajets quotidiens. Les recharges et pleins liés aux gros trajets ne sont pas pris en compte.
               </span>
             </div>
             <div className="charging-summary-card">
@@ -792,8 +798,8 @@ export default function ChargingAnalysis({
               <span className="charging-comparison-title">Lecture</span>
               <span className="charging-comparison-text">
                 {showEnergyOnlyComparison
-                  ? "Le graphique compare le coût de recharge du VE, donc énergie et abonnement, face au coût d'énergie du véhicule actuel."
-                  : "Le graphique compare le véhicule actuel à la solution VE retenue, avec énergie, abonnement, borne amortie et entretien."}
+                  ? "Le graphique compare le coût de recharge du VE, donc énergie et abonnement, face au coût d'énergie du véhicule actuel. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'équation."
+                  : "Le graphique compare le véhicule actuel à la solution VE retenue, avec énergie, abonnement, borne amortie et entretien. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'équation."}
               </span>
             </div>
           )}
