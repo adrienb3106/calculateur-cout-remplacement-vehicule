@@ -411,17 +411,11 @@ export default function ChargingAnalysis({
       }
       if ((automaticElectricVehicle.chargingSetup || "individual") === "individual") {
         if (!hasPositive(automaticElectricVehicle.hcPrice)) {
-          missing.push("prix HC du véhicule électrique");
+          missing.push("Tarif Heure Creuse du véhicule électrique");
         }
         if (!hasPositive(automaticElectricVehicle.hpPrice)) {
-          missing.push("prix HP du véhicule électrique");
+          missing.push("Tarif Heure Pleine du véhicule électrique");
         }
-      }
-      if (
-        (automaticElectricVehicle.chargingSetup || "individual") === "residence" &&
-        !Number.isFinite(Number(automaticElectricVehicle.homeOffPeakShare))
-      ) {
-        missing.push("part de recharge maison en heures creuses");
       }
     }
 

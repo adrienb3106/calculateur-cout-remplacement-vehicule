@@ -123,12 +123,12 @@ export default function VehicleForm({ type, data, setData, title, role = "curren
               {chargingSetup === "individual" && (
                 <>
                   <Field
-                    label="Prix HC (€/kWh)"
+                    label="Tarif Heures Creuses (€/kWh)"
                     value={data.hcPrice}
                     onChange={(num) => setData({ ...data, hcPrice: num })}
                   />
                   <Field
-                    label="Prix HP (€/kWh)"
+                    label="Tarif Heures Pleines (€/kWh)"
                     value={data.hpPrice}
                     onChange={(num) => setData({ ...data, hpPrice: num })}
                   />
