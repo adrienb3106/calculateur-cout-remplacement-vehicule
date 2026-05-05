@@ -192,7 +192,8 @@ export default function ChargingAnalysis({
   kmHighway,
 }) {
   const annualKmFromApp = safe(kmCity) + safe(kmHighway);
-  const defaultWeeklyKm = annualKmFromApp ? round(annualKmFromApp / 52, 0) : round(6000 / 52, 0);
+  const dailyUseAnnualKm = safe(kmCity);
+  const defaultWeeklyKm = dailyUseAnnualKm ? round(dailyUseAnnualKm / 52, 0) : round(6000 / 52, 0);
   const vehicleChoices = useMemo(
     () => getVehicleChoices(oldCar, newCar, oldType, newType),
     [oldCar, newCar, oldType, newType]
@@ -211,6 +212,9 @@ export default function ChargingAnalysis({
   const [horizonMonths, setHorizonMonths] = useState(() => load("charging_horizon_months", 36));
   const [chargerTiming, setChargerTiming] = useState(() => load("charging_charger_timing", "after"));
   const [includeCharger, setIncludeCharger] = useState(() => load("charging_include_charger", true));
+  const [individualTariff, setIndividualTariff] = useState(() => load("charging_individual_tariff", 0.2));
+  const [individualChargerCost, setIndividualChargerCost] = useState(() => load("charging_individual_charger_cost", 0));
+  const [excludeIndividualFromBestOffer, setExcludeIndividualFromBestOffer] = useState(() => load("charging_exclude_individual", false));
   const [selectedOfferId, setSelectedOfferId] = useState(() => load("charging_offer_id", ""));
   const [comparisonMode, setComparisonMode] = useState(() => load("charging_comparison_mode", "full"));
 
@@ -241,10 +245,10 @@ export default function ChargingAnalysis({
   }, [importedConsumption, sourceVehicle]);
 
   useEffect(() => {
-    if (annualKmFromApp) {
-      setWeeklyKm(round(annualKmFromApp / 52, 0));
+    if (dailyUseAnnualKm) {
+      setWeeklyKm(round(dailyUseAnnualKm / 52, 0));
     }
-  }, [annualKmFromApp]);
+  }, [dailyUseAnnualKm]);
 
   useEffect(() => { save("charging_vehicle_source", vehicleSource); }, [vehicleSource]);
   useEffect(() => { save("charging_weekly_km", weeklyKm); }, [weeklyKm]);
@@ -253,6 +257,9 @@ export default function ChargingAnalysis({
   useEffect(() => { save("charging_horizon_months", horizonMonths); }, [horizonMonths]);
   useEffect(() => { save("charging_charger_timing", chargerTiming); }, [chargerTiming]);
   useEffect(() => { save("charging_include_charger", includeCharger); }, [includeCharger]);
+  useEffect(() => { save("charging_individual_tariff", individualTariff); }, [individualTariff]);
+  useEffect(() => { save("charging_individual_charger_cost", individualChargerCost); }, [individualChargerCost]);
+  useEffect(() => { save("charging_exclude_individual", excludeIndividualFromBestOffer); }, [excludeIndividualFromBestOffer]);
   useEffect(() => { save("charging_offer_id", selectedOfferId); }, [selectedOfferId]);
   useEffect(() => { save("charging_comparison_mode", comparisonMode); }, [comparisonMode]);
 
@@ -288,13 +295,13 @@ export default function ChargingAnalysis({
   const oldUsageForWeeklyKm = oldType
     ? getTotalUsageCost(
         { ...oldCar, type: oldType },
-        yearlyKm * (annualKmFromApp ? safe(kmCity) / annualKmFromApp : 0.5),
-        yearlyKm * (annualKmFromApp ? safe(kmHighway) / annualKmFromApp : 0.5)
+        yearlyKm,
+        0
       )
     : null;
 
   const offerRows = useMemo(() => {
-    return chargingOffers
+    const residenceRows = chargingOffers
       .map((offer) => {
         const blendedPrice = getBlendedElectricityPrice(
           offer.hc_price_eur_per_kwh,
@@ -317,6 +324,9 @@ export default function ChargingAnalysis({
 
         return {
           ...offer,
+          solutionLabel: `${offer.provider} ${offer.offer_name}`,
+          solutionType: "residence",
+          eligibleForBestOffer: true,
           blendedPrice,
           energyMonthly,
           energyYearly,
@@ -331,12 +341,49 @@ export default function ChargingAnalysis({
           usageYearly,
           firstYearUsage,
         };
-      })
+      });
+
+    const individualEnergyMonthly = (yearlyKwh * safe(individualTariff)) / 12;
+    const individualEnergyYearly = yearlyKwh * safe(individualTariff);
+    const individualChargerValue = includeCharger ? safe(individualChargerCost) : 0;
+    const individualChargerMonthly = individualChargerValue / effectiveMonths;
+    const individualChargingMonthly = individualEnergyMonthly + individualChargerMonthly;
+    const individualChargingTotal = (individualEnergyMonthly * effectiveMonths) + individualChargerValue;
+
+    const individualReferenceRow = {
+      id: "individual_reference",
+      provider: "Référence",
+      offer_name: "Borne individuelle",
+      solutionLabel: "Référence · Borne individuelle",
+      solutionType: "individual",
+      eligibleForBestOffer: !excludeIndividualFromBestOffer,
+      notes: "Tarif copropriété saisi dans la page 2",
+      hc_price_eur_per_kwh: safe(individualTariff),
+      hp_price_eur_per_kwh: safe(individualTariff),
+      blendedPrice: safe(individualTariff),
+      energyMonthly: individualEnergyMonthly,
+      energyYearly: individualEnergyYearly,
+      subscriptionMonthly: 0,
+      subscriptionTotal: 0,
+      chargerPrice: individualChargerValue,
+      chargerPriceExact: true,
+      chargerMonthly: individualChargerMonthly,
+      chargingMonthly: individualChargingMonthly,
+      chargingTotal: individualChargingTotal,
+      usageMonthly: individualChargingMonthly + (maintenanceYearly / 12),
+      usageYearly: individualEnergyYearly + maintenanceYearly + (individualChargerValue * (12 / effectiveMonths)),
+      firstYearUsage: individualEnergyYearly + maintenanceYearly + individualChargerValue,
+    };
+
+    return [...residenceRows, individualReferenceRow]
       .sort((left, right) => left.chargingMonthly - right.chargingMonthly);
   }, [
     chargerTiming,
     effectiveMonths,
+    excludeIndividualFromBestOffer,
     includeCharger,
+    individualChargerCost,
+    individualTariff,
     maintenanceYearly,
     offPeakShare,
     yearlyKwh,
@@ -349,18 +396,32 @@ export default function ChargingAnalysis({
     }
   }, [offerRows, selectedOfferId]);
 
-  const bestOffer = offerRows[0] || null;
+  const bestOffer = offerRows.find((offer) => offer.eligibleForBestOffer) || null;
   const selectedOffer = offerRows.find((offer) => offer.id === selectedOfferId) || bestOffer || null;
   const summaryOffer = bestOffer;
+  const oldRechargeMonthly = oldUsageForWeeklyKm
+    ? (oldUsageForWeeklyKm.fuel + oldUsageForWeeklyKm.chargingSubscription) / 12
+    : null;
+  const newRechargeMonthly = summaryOffer
+    ? summaryOffer.energyMonthly + summaryOffer.subscriptionMonthly
+    : null;
   const providerVsOldVehicle = summaryOffer && oldUsageForWeeklyKm
     ? summaryOffer.usageMonthly - oldUsageForWeeklyKm.monthly
     : null;
-  const energyOnlyVsOldVehicle = summaryOffer && oldUsageForWeeklyKm
-    ? (summaryOffer.energyMonthly + summaryOffer.subscriptionMonthly) - (oldUsageForWeeklyKm.fuel / 12)
+  const rechargeOnlyVsOldVehicle = summaryOffer && oldUsageForWeeklyKm
+    ? newRechargeMonthly - oldRechargeMonthly
+    : null;
+  const rechargeWithBorneVsOldVehicle = summaryOffer && oldUsageForWeeklyKm
+    ? (newRechargeMonthly + summaryOffer.chargerMonthly) - oldRechargeMonthly
     : null;
   const monthlyMaintenance = maintenanceYearly / 12;
-  const showEnergyOnlyComparison = comparisonMode === "energy";
-  const displayedVsOldVehicle = showEnergyOnlyComparison ? energyOnlyVsOldVehicle : providerVsOldVehicle;
+  const comparisonIncludesBorne = comparisonMode === "full" || comparisonMode === "recharge_borne";
+  const displayedVsOldVehicle =
+    comparisonMode === "full"
+      ? providerVsOldVehicle
+      : comparisonMode === "recharge_borne"
+        ? rechargeWithBorneVsOldVehicle
+        : rechargeOnlyVsOldVehicle;
 
   const currentVehicleChartData = useMemo(() => {
     if (!summaryOffer || !oldUsageForWeeklyKm) return [];
@@ -369,23 +430,23 @@ export default function ChargingAnalysis({
       {
         name: "Véhicule actuel",
         Energie: oldUsageForWeeklyKm.fuel / 12,
-        Abonnement: 0,
+        Abonnement: oldUsageForWeeklyKm.chargingSubscription / 12,
         Borne: 0,
-        Entretien: showEnergyOnlyComparison ? 0 : oldUsageForWeeklyKm.maintenance / 12,
+        Entretien: comparisonMode === "full" ? oldUsageForWeeklyKm.maintenance / 12 : 0,
       },
       {
         name: "VE + meilleure offre",
         Energie: summaryOffer.energyMonthly,
         Abonnement: summaryOffer.subscriptionMonthly,
-        Borne: showEnergyOnlyComparison ? 0 : summaryOffer.chargerMonthly,
-        Entretien: showEnergyOnlyComparison ? 0 : monthlyMaintenance,
+        Borne: comparisonIncludesBorne ? summaryOffer.chargerMonthly : 0,
+        Entretien: comparisonMode === "full" ? monthlyMaintenance : 0,
       },
     ];
-  }, [monthlyMaintenance, oldUsageForWeeklyKm, showEnergyOnlyComparison, summaryOffer]);
+  }, [comparisonIncludesBorne, comparisonMode, monthlyMaintenance, oldUsageForWeeklyKm, summaryOffer]);
 
   const offersChartData = useMemo(() => (
     offerRows.map((offer) => ({
-      name: `${offer.provider} ${offer.offer_name}`,
+      name: offer.solutionLabel,
       Energie: offer.energyMonthly,
       Abonnement: offer.subscriptionMonthly,
       Borne: offer.chargerMonthly,
@@ -470,11 +531,11 @@ export default function ChargingAnalysis({
             hint={sourceVehicle ? `Valeur reprise de l'app : ${formatNumber(importedConsumption)} kWh/100` : null}
           />
           <NumberField
-            label="Km moyens par semaine"
+            label="Km moyens par semaine (trajets quotidiens)"
             value={weeklyKm}
             onChange={setWeeklyKm}
             integer
-            hint={annualKmFromApp ? `Base app : ${Math.round(annualKmFromApp).toLocaleString("fr-FR")} km/an` : null}
+            hint={dailyUseAnnualKm ? `Base app : ${Math.round(dailyUseAnnualKm).toLocaleString("fr-FR")} km/an en ville` : null}
           />
           <NumberField
             label="Part des recharges en heures creuses"
@@ -491,6 +552,32 @@ export default function ChargingAnalysis({
             suffix="mois"
           />
         </div>
+
+        <div className="field-divider" />
+
+        <p className="section-label">Solution de référence : borne individuelle</p>
+        <div className="charging-grid">
+          <NumberField
+            label="Tarif kWh copropriété"
+            value={individualTariff}
+            onChange={setIndividualTariff}
+          />
+          <NumberField
+            label="Prix de la borne à l'installation"
+            value={individualChargerCost}
+            onChange={setIndividualChargerCost}
+            hint="Montant net, aides déduites"
+          />
+        </div>
+
+        <label className="charging-checkbox" style={{ marginTop: 10 }}>
+          <input
+            type="checkbox"
+            checked={excludeIndividualFromBestOffer}
+            onChange={(event) => setExcludeIndividualFromBestOffer(event.target.checked)}
+          />
+          Exclure la borne individuelle du choix de la meilleure solution
+        </label>
 
         <div className="field-divider" />
 
@@ -548,7 +635,7 @@ export default function ChargingAnalysis({
       <div className="card">
         <div className="charging-section-header">
           <div>
-            <h2>Classement des prestataires</h2>
+            <h2>Classement des solutions</h2>
             <p className="charging-section-note">
               Comparaison sur {effectiveMonths} mois avec abonnement, énergie et
               {includeCharger ? " borne incluse." : " borne exclue."}
@@ -556,7 +643,7 @@ export default function ChargingAnalysis({
           </div>
           {bestOffer && (
             <span className="charging-best-badge">
-              Meilleur coût lissé : {bestOffer.provider} {bestOffer.offer_name}
+              Meilleur coût lissé : {bestOffer.solutionLabel}
             </span>
           )}
         </div>
@@ -565,7 +652,7 @@ export default function ChargingAnalysis({
           <table className="trip-table charging-offers-table">
             <thead>
               <tr>
-                <th>Prestataire</th>
+                <th>Solution</th>
                 <th>Prix moyen kWh</th>
                 <th>Énergie / mois</th>
                 <th>Abo. moyen / mois</th>
@@ -577,7 +664,7 @@ export default function ChargingAnalysis({
             </thead>
             <tbody>
               {offerRows.map((offer, index) => {
-                const isBest = index === 0;
+                const isBest = bestOffer?.id === offer.id;
                 const isSelected = selectedOffer?.id === offer.id;
 
                 return (
@@ -586,11 +673,12 @@ export default function ChargingAnalysis({
                     className={`${isSelected ? "charging-row-selected" : ""} ${isBest ? "charging-row-best" : ""}`}
                   >
                     <td className="trip-op-name">
-                      {offer.provider}
-                      <span className="trip-op-note">
-                        {offer.offer_name}
-                        {offer.notes ? ` · ${offer.notes}` : ""}
-                      </span>
+                      {offer.solutionLabel}
+                      {(offer.notes || !offer.eligibleForBestOffer) && (
+                        <span className="trip-op-note">
+                          {offer.notes || "Exclue du choix de la meilleure solution"}
+                        </span>
+                      )}
                     </td>
                     <td className="trip-right">
                       <span className="trip-kwh">{formatCurrency(offer.blendedPrice)}</span>
@@ -666,9 +754,9 @@ export default function ChargingAnalysis({
         <div className="card result">
           <div className="charging-section-header">
             <div>
-              <h2>Rentabilité d'usage du VE</h2>
+              <h2>Rentabilit? d'usage du VE</h2>
               <p className="charging-section-note">
-                Synthèse avec la meilleure offre actuelle : {summaryOffer.provider} {summaryOffer.offer_name}.
+                Synth?se avec la meilleure solution actuelle : {summaryOffer.solutionLabel}.
               </p>
             </div>
           </div>
@@ -678,10 +766,10 @@ export default function ChargingAnalysis({
               <span className="charging-summary-label">Recharge mensuelle lisse</span>
               <strong>{formatCurrency(summaryOffer.chargingMonthly)}</strong>
               <span className="charging-summary-sub">
-                Énergie + abonnement + borne amortie sur {effectiveMonths} mois
+                ?nergie + abonnement + borne amortie sur {effectiveMonths} mois
               </span>
               <span className="charging-summary-sub">
-                La borne est lissée sur {effectiveMonths} mois dans ce calcul.
+                La borne est liss?e sur {effectiveMonths} mois dans ce calcul.
               </span>
             </div>
             <div className="charging-summary-card">
@@ -691,21 +779,21 @@ export default function ChargingAnalysis({
                 Recharge lisse + entretien
               </span>
               <span className="charging-summary-sub">
-                Calcul limité aux trajets quotidiens. Les recharges et pleins liés aux gros trajets ne sont pas pris en compte.
+                Calcul limit? aux trajets quotidiens. Les recharges et pleins li?s aux gros trajets ne sont pas pris en compte.
               </span>
             </div>
             <div className="charging-summary-card">
               <span className="charging-summary-label">Usage VE / an</span>
               <strong>{formatCompactCurrency(summaryOffer.usageYearly)}</strong>
               <span className="charging-summary-sub">
-                Ramené en coût annuel moyen
+                Ramen? en co?t annuel moyen
               </span>
             </div>
             <div className="charging-summary-card">
-              <span className="charging-summary-label">Dépense réelle 1ère année</span>
+              <span className="charging-summary-label">D?pense r?elle 1?re ann?e</span>
               <strong>{formatCompactCurrency(summaryOffer.firstYearUsage)}</strong>
               <span className="charging-summary-sub">
-                Énergie + abonnement + entretien + borne
+                ?nergie + abonnement + entretien + borne
               </span>
             </div>
           </div>
@@ -716,7 +804,7 @@ export default function ChargingAnalysis({
                 <span className="charging-comparison-title">Base de calcul</span>
                 <strong>{formatCurrency(summaryOffer.usageMonthly)} / mois</strong>
                 <span className="charging-comparison-text">
-                  Renseignez un VE dans l'app principale pour comparer automatiquement vos coûts d'usage.
+                  Renseignez un VE dans l'app principale pour comparer automatiquement vos co?ts d'usage.
                 </span>
               </div>
             )}
@@ -726,32 +814,41 @@ export default function ChargingAnalysis({
             <div className="charging-chart-block">
               <div className="charging-section-header">
                 <div>
-                  <h3 className="charging-chart-title">Comparaison graphique avec le véhicule actuel</h3>
+                  <h3 className="charging-chart-title">Comparaison graphique avec le v?hicule actuel</h3>
                   <p className="charging-chart-subtitle">
-                    {showEnergyOnlyComparison
-                      ? "Vue mensuelle limitée à la recharge du VE : énergie et abonnement."
-                      : "Vue mensuelle des coûts d'usage à kilométrage équivalent."}
+                    {comparisonMode === "full"
+                      ? "Vue mensuelle de l'usage complet, avec toutes les informations de la page 1 hors pr?t lorsqu'elles sont renseign?es."
+                      : comparisonMode === "recharge_borne"
+                        ? "Vue mensuelle de la recharge du VE avec abonnement et borne amortie."
+                        : "Vue mensuelle de la recharge du VE : ?nergie et abonnement."}
                   </p>
                 </div>
                 <div className="charging-comparison-actions">
                   <div className="toggle-group charging-toggle-inline">
                     <button
                       type="button"
-                      className={!showEnergyOnlyComparison ? "toggle active" : "toggle"}
+                      className={comparisonMode === "full" ? "toggle active" : "toggle"}
                       onClick={() => setComparisonMode("full")}
                     >
                       Usage complet
                     </button>
                     <button
                       type="button"
-                      className={showEnergyOnlyComparison ? "toggle active" : "toggle"}
+                      className={comparisonMode === "energy" ? "toggle active" : "toggle"}
                       onClick={() => setComparisonMode("energy")}
                     >
                       Recharge seule
                     </button>
+                    <button
+                      type="button"
+                      className={comparisonMode === "recharge_borne" ? "toggle active" : "toggle"}
+                      onClick={() => setComparisonMode("recharge_borne")}
+                    >
+                      Recharge + borne
+                    </button>
                   </div>
                   <span className={displayedVsOldVehicle <= 0 ? "charging-best-badge" : "charging-best-badge charging-badge-negative"}>
-                    Écart: {displayedVsOldVehicle > 0 ? "+" : ""}{formatCurrency(displayedVsOldVehicle)} / mois
+                    ?cart: {displayedVsOldVehicle > 0 ? "+" : ""}{formatCurrency(displayedVsOldVehicle)} / mois
                   </span>
                 </div>
               </div>
@@ -765,7 +862,7 @@ export default function ChargingAnalysis({
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={(value) => `${Math.round(value)} €`} tick={{ fontSize: 12 }} />
+                  <YAxis tickFormatter={(value) => `${Math.round(value)} ?`} tick={{ fontSize: 12 }} />
                   <Tooltip content={<CurrentVehicleTooltip />} />
                   <Legend />
                   <Bar dataKey="Energie" stackId="cost" fill={CHART_COLORS.energy} />
@@ -779,27 +876,29 @@ export default function ChargingAnalysis({
 
           {!currentVehicleChartData.length && oldUsageForWeeklyKm && (
             <div className="charging-comparison-card charging-comparison-card-wide">
-              <span className="charging-comparison-title">Vs véhicule actuel</span>
+              <span className="charging-comparison-title">Vs v?hicule actuel</span>
               <strong className={displayedVsOldVehicle <= 0 ? "charging-positive" : "charging-negative"}>
                 {displayedVsOldVehicle <= 0 ? "" : "+"}
                 {formatCurrency(displayedVsOldVehicle)}
                 {" / mois"}
               </strong>
               <span className="charging-comparison-text">
-                {showEnergyOnlyComparison
-                  ? `Véhicule actuel, énergie seule : ${formatCurrency(oldUsageForWeeklyKm.fuel / 12)} / mois`
-                  : `Véhicule actuel : ${formatCurrency(oldUsageForWeeklyKm.monthly)} / mois`}
+                {comparisonMode === "full"
+                  ? `V?hicule actuel : ${formatCurrency(oldUsageForWeeklyKm.monthly)} / mois`
+                  : `V?hicule actuel, recharge/carburant : ${formatCurrency(oldRechargeMonthly)} / mois`}
               </span>
             </div>
           )}
-          
+
           {currentVehicleChartData.length > 0 && (
             <div className="charging-comparison-card charging-comparison-card-wide">
               <span className="charging-comparison-title">Lecture</span>
               <span className="charging-comparison-text">
-                {showEnergyOnlyComparison
-                  ? "Le graphique compare le coût de recharge du VE, donc énergie et abonnement, face au coût d'énergie du véhicule actuel. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'équation."
-                  : "Le graphique compare le véhicule actuel à la solution VE retenue, avec énergie, abonnement, borne amortie et entretien. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'équation."}
+                {comparisonMode === "full"
+                  ? "Le graphique compare le v?hicule actuel ? la solution VE retenue avec toutes les informations d'usage disponibles de la page 1, hors pr?t. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'?quation."
+                  : comparisonMode === "recharge_borne"
+                    ? "Le graphique compare le co?t de recharge du VE avec abonnement et borne amortie, face au co?t de carburant ou de recharge du v?hicule actuel. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'?quation."
+                    : "Le graphique compare le co?t de recharge du VE, donc ?nergie et abonnement, face au co?t de carburant ou de recharge du v?hicule actuel. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'?quation."}
               </span>
             </div>
           )}
