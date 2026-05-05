@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useT } from "../i18n";
+import chargingOffers from "../../tarifs.json";
 
-function Field({ label, value, onChange, integer }) {
+const DEFAULT_INDIVIDUAL_OFFER =
+  chargingOffers.find((offer) => offer.id === "izi_by_edf") || chargingOffers[0] || null;
+
+function Field({ label, value, onChange, integer, hint }) {
   const initial = value !== undefined && value !== "" && value !== 0 ? String(value) : "";
   const [raw, setRaw] = useState(initial);
   const [error, setError] = useState(false);
@@ -22,14 +26,37 @@ function Field({ label, value, onChange, integer }) {
       <div className="field-input-wrap">
         <input type="text" value={raw} onChange={handleChange} className={error ? "field-input-error" : ""} />
         {error && <span className="field-error-msg">Valeur invalide</span>}
+        {hint && !error && <span className="field-hint-msg">{hint}</span>}
       </div>
     </div>
   );
 }
 
-export default function VehicleForm({ type, data, setData, title }) {
+export default function VehicleForm({ type, data, setData, title, role = "current", kmCity = 0, kmHighway = 0 }) {
   const t = useT();
   const isUsed = data.used ?? false;
+  const totalKm = (Number(kmCity) || 0) + (Number(kmHighway) || 0);
+  const suggestedOffPeakShare = totalKm ? Math.round(((Number(kmCity) || 0) / totalKm) * 100) : 0;
+  const chargingSetup = data.chargingSetup || "individual";
+  const showAdvancedElectricOptions = role === "new";
+
+  function handleChargingSetupChange(nextSetup) {
+    const nextData = { ...data, chargingSetup: nextSetup };
+
+    if (nextSetup === "individual") {
+      if (!data.hcPrice && DEFAULT_INDIVIDUAL_OFFER?.hc_price_eur_per_kwh) {
+        nextData.hcPrice = DEFAULT_INDIVIDUAL_OFFER.hc_price_eur_per_kwh;
+      }
+      if (!data.hpPrice && DEFAULT_INDIVIDUAL_OFFER?.hp_price_eur_per_kwh) {
+        nextData.hpPrice = DEFAULT_INDIVIDUAL_OFFER.hp_price_eur_per_kwh;
+      }
+      if (data.homeOffPeakShare === undefined && totalKm) {
+        nextData.homeOffPeakShare = suggestedOffPeakShare;
+      }
+    }
+
+    setData(nextData);
+  }
 
   return (
     <div className="card">
@@ -72,8 +99,57 @@ export default function VehicleForm({ type, data, setData, title }) {
             onChange={(num) => setData({ ...data, cityConsumption: num })} />
           <Field label={t.highwayConsumptionKwh} value={data.highwayConsumption}
             onChange={(num) => setData({ ...data, highwayConsumption: num })} />
-          <Field label={t.electricityPrice} value={data.energyPrice}
-            onChange={(num) => setData({ ...data, energyPrice: num })} />
+
+          {showAdvancedElectricOptions ? (
+            <>
+              <p className="section-label">Recharge</p>
+              <div className="toggle-group" style={{ marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className={chargingSetup === "individual" ? "toggle active" : "toggle"}
+                  onClick={() => handleChargingSetupChange("individual")}
+                >
+                  Borne individuelle
+                </button>
+                <button
+                  type="button"
+                  className={chargingSetup === "residence" ? "toggle active" : "toggle"}
+                  onClick={() => handleChargingSetupChange("residence")}
+                >
+                  Borne en résidence
+                </button>
+              </div>
+
+              {chargingSetup === "individual" && (
+                <>
+                  <Field
+                    label="Prix HC (€/kWh)"
+                    value={data.hcPrice}
+                    onChange={(num) => setData({ ...data, hcPrice: num })}
+                  />
+                  <Field
+                    label="Prix HP (€/kWh)"
+                    value={data.hpPrice}
+                    onChange={(num) => setData({ ...data, hpPrice: num })}
+                  />
+                  <Field
+                    label="Recharge maison en HC (%)"
+                    value={data.homeOffPeakShare ?? suggestedOffPeakShare}
+                    integer
+                    onChange={(num) => setData({ ...data, homeOffPeakShare: num })}
+                  />
+                </>
+              )}
+              {chargingSetup === "residence" && (
+                <p className="field-note">
+                  Le calcul utilise la meilleure offre de recharge en résidence issue de la page 2.
+                </p>
+              )}
+            </>
+          ) : (
+            <Field label={t.electricityPrice} value={data.energyPrice}
+              onChange={(num) => setData({ ...data, energyPrice: num })} />
+          )}
         </>
       )}
     </div>

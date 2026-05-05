@@ -20,6 +20,7 @@ const fmt = (v) => (Number.isFinite(v) ? v.toFixed(2) : "—");
 
 const COLORS = {
   fuel: "#3b82f6",
+  subscription: "#8b5cf6",
   maintenance: "#10b981",
   loan: "#f59e0b",
 };
@@ -69,23 +70,27 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
   const diff = totalNewWithLoan - totalOld;
   const diffAfter = totalNewAfterLoan - totalOld;
   const charger = financing.chargerCost || 0;
+  const hasChargingSubscription = oldCost.chargingSubscription > 0 || newCost.chargingSubscription > 0;
 
   const chartData = [
     {
       name: "Ancien véhicule",
       Carburant: oldCost.fuel / 12,
+      Abonnement: oldCost.chargingSubscription / 12,
       Entretien: oldCost.maintenance / 12,
       Prêt: 0,
     },
     {
       name: "Nouveau (avec prêt)",
       Carburant: newCost.fuel / 12,
+      Abonnement: newCost.chargingSubscription / 12,
       Entretien: newCost.maintenance / 12,
       Prêt: financing.monthlyLoan,
     },
     {
       name: "Nouveau (après prêt)",
       Carburant: newCost.fuel / 12,
+      Abonnement: newCost.chargingSubscription / 12,
       Entretien: newCost.maintenance / 12,
       Prêt: 0,
     },
@@ -93,14 +98,13 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
 
   const loanMonths = finance.duration || 0;
   const SEARCH_HORIZON = 25;
-  // Maintenance de l'ancien véhicule thermique augmente de 6%/an
   const OLD_MAINT_GROWTH = oldCar.type === "thermal" ? 0.06 : 0;
 
   function calcCumul(year) {
     const months = year * 12;
     const activeLoanMonths = Math.min(months, loanMonths);
     let cumOld = 0;
-    const fuelMonthlyOld = oldCost.fuel / 12;
+    const fuelMonthlyOld = (oldCost.fuel + oldCost.chargingSubscription) / 12;
     const baseMaintenanceMonthlyOld = oldCost.maintenance / 12;
     for (let y = 1; y <= year; y++) {
       const yearlyMaint = baseMaintenanceMonthlyOld * 12 * Math.pow(1 + OLD_MAINT_GROWTH, y - 1);
@@ -113,7 +117,6 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
     return { cumOld: Math.round(cumOld), cumNew: Math.round(cumNew) };
   }
 
-  // Chercher le break-even sur 25 ans
   let cumulBreakevenYear = null;
   for (let y = 1; y <= SEARCH_HORIZON; y++) {
     const { cumOld, cumNew } = calcCumul(y);
@@ -145,6 +148,12 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
     <div className="card result">
       <h2>Résultats</h2>
 
+      {newCost.residenceOfferLabel && (
+        <p className="results-note">
+          Borne en résidence : calcul basé sur la meilleure offre actuelle, {newCost.residenceOfferLabel}.
+        </p>
+      )}
+
       <table className="result-table">
         <thead>
           <tr>
@@ -161,6 +170,14 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
             <td>{fmt(newCost.fuel / 12)} €/mois</td>
             <td>{fmt(newCost.fuel / 12)} €/mois</td>
           </tr>
+          {(oldCost.chargingSubscription > 0 || newCost.chargingSubscription > 0) && (
+            <tr>
+              <td>Abonnement recharge</td>
+              <td>{oldCost.chargingSubscription > 0 ? `${fmt(oldCost.chargingSubscription / 12)} €/mois` : "—"}</td>
+              <td>{newCost.chargingSubscription > 0 ? `${fmt(newCost.chargingSubscription / 12)} €/mois` : "—"}</td>
+              <td>{newCost.chargingSubscription > 0 ? `${fmt(newCost.chargingSubscription / 12)} €/mois` : "—"}</td>
+            </tr>
+          )}
           <tr>
             <td>Entretien</td>
             <td>{fmt(oldCost.maintenance / 12)} €/mois</td>
@@ -184,7 +201,7 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
           <tr className="total-row">
             <td>Total mensuel</td>
             <td>{fmt(totalOld)} €/mois</td>
-            <td>{fmt(totalNewWithLoan)} €/mois {charger > 0 && <span style={{fontSize:11, color:"#f59e0b"}}>+{fmt(charger)} € M1</span>}</td>
+            <td>{fmt(totalNewWithLoan)} €/mois {charger > 0 && <span style={{ fontSize: 11, color: "#f59e0b" }}>+{fmt(charger)} € M1</span>}</td>
             <td>{fmt(totalNewAfterLoan)} €/mois</td>
           </tr>
           <tr>
@@ -207,6 +224,9 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
           <Tooltip content={<CustomTooltip />} />
           <Legend />
           <Bar dataKey="Carburant" stackId="a" fill={COLORS.fuel} barSize={40} />
+          {hasChargingSubscription && (
+            <Bar dataKey="Abonnement" stackId="a" fill={COLORS.subscription} barSize={40} />
+          )}
           <Bar dataKey="Entretien" stackId="a" fill={COLORS.maintenance} barSize={40} />
           <Bar dataKey="Prêt" stackId="a" fill={COLORS.loan} barSize={40} radius={[6, 6, 0, 0]} />
         </BarChart>
@@ -231,7 +251,7 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
         {showCumul && (
           <>
             <p style={{ fontSize: 13, color: "#64748b", margin: "8px 0 16px" }}>
-              Argent total dépensé depuis l'achat — comparer garder l'ancien véhicule vs acquérir le nouveau.
+              Argent total dépensé depuis l'achat : comparer garder l'ancien véhicule vs acquérir le nouveau.
             </p>
             <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
               {cumulBreakeven ? (

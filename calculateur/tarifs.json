@@ -1,0 +1,76 @@
+[
+  {
+    "id": "izi_by_edf",
+    "provider": "IZI by EDF",
+    "offer_name": "Clé en main",
+    "reduced_monthly_subscription_eur": 9.90,
+    "reduced_subscription_duration_months": 12,
+    "full_monthly_subscription_eur": 14.90,
+    "hc_price_eur_per_kwh": 0.1579,
+    "hp_price_eur_per_kwh": 0.2065,
+    "charger_7_4kw_price_before_installation_eur": null,
+    "charger_7_4kw_price_after_installation_eur": 1450,
+    "notes": "Prix HC/HP modélisés sur le Tarif Réglementé de Vente EDF. Le prix de borne installée est à confirmer au devis."
+  },
+  {
+    "id": "waat",
+    "provider": "WAAT",
+    "offer_name": "Copropriété",
+    "reduced_monthly_subscription_eur": 9.90,
+    "reduced_subscription_duration_months": 12,
+    "full_monthly_subscription_eur": 14.90,
+    "hc_price_eur_per_kwh": 0.16,
+    "hp_price_eur_per_kwh": 0.28,
+    "charger_7_4kw_price_before_installation_eur": null,
+    "charger_7_4kw_price_after_installation_eur": 999
+  },
+  {
+    "id": "zeplug",
+    "provider": "Zeplug",
+    "offer_name": "Offre 1",
+    "reduced_monthly_subscription_eur": 6.90,
+    "reduced_subscription_duration_months": 6,
+    "full_monthly_subscription_eur": 16.90,
+    "hc_price_eur_per_kwh": 0.17,
+    "hp_price_eur_per_kwh": 0.28,
+    "charger_7_4kw_price_before_installation_eur": 999,
+    "charger_7_4kw_price_after_installation_eur": 749,
+    "notes": ""
+  },
+  {
+    "id": "amperus_1",
+    "provider": "Amperus",
+    "offer_name": "Essentiel",
+    "reduced_monthly_subscription_eur": 3.90,
+    "reduced_subscription_duration_months": 6,
+    "full_monthly_subscription_eur": 13.90,
+    "hc_price_eur_per_kwh": 0.21,
+    "hp_price_eur_per_kwh": 0.33,
+    "charger_7_4kw_price_before_installation_eur": 729,
+    "charger_7_4kw_price_after_installation_eur": 1079
+  },
+  {
+    "id": "amperus_2",
+    "provider": "Amperus",
+    "offer_name": "Equilibre",
+    "reduced_monthly_subscription_eur": 6.90,
+    "reduced_subscription_duration_months": 6,
+    "full_monthly_subscription_eur": 16.90,
+    "hc_price_eur_per_kwh": 0.15,
+    "hp_price_eur_per_kwh": 0.26,
+    "charger_7_4kw_price_before_installation_eur": 729,
+    "charger_7_4kw_price_after_installation_eur": 1079
+  },
+  {
+    "id": "amperus_3",
+    "provider": "Amperus",
+    "offer_name": "Optimal",
+    "reduced_monthly_subscription_eur": 9.90,
+    "reduced_subscription_duration_months": 6,
+    "full_monthly_subscription_eur": 19.90,
+    "hc_price_eur_per_kwh": 0.14,
+    "hp_price_eur_per_kwh": 0.21,
+    "charger_7_4kw_price_before_installation_eur": 729,
+    "charger_7_4kw_price_after_installation_eur": 1079
+  }
+]

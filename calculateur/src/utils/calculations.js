@@ -1,6 +1,177 @@
+import chargingOffers from "../../tarifs.json";
+
 function safe(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+function isFiniteNumber(v) {
+  return Number.isFinite(Number(v));
+}
+
+function clamp(v, min, max) {
+  return Math.min(max, Math.max(min, v));
+}
+
+export function getAnnualEnergyUsage(cityConsumption, highwayConsumption, kmCity, kmHighway) {
+  const city = safe(cityConsumption);
+  const highway = safe(highwayConsumption);
+
+  return ((city / 100) * safe(kmCity)) + ((highway / 100) * safe(kmHighway));
+}
+
+export function getAverageElectricConsumption(cityConsumption, highwayConsumption, kmCity, kmHighway) {
+  const annualKm = safe(kmCity) + safe(kmHighway);
+  if (!annualKm) {
+    return safe(cityConsumption) || safe(highwayConsumption);
+  }
+
+  const annualEnergy = getAnnualEnergyUsage(cityConsumption, highwayConsumption, kmCity, kmHighway);
+  return annualEnergy ? (annualEnergy / annualKm) * 100 : 0;
+}
+
+export function getBlendedElectricityPrice(offPeakPrice, peakPrice, offPeakSharePercent) {
+  const offPeakShare = Math.min(100, Math.max(0, safe(offPeakSharePercent))) / 100;
+  const hpShare = 1 - offPeakShare;
+  return (safe(offPeakPrice) * offPeakShare) + (safe(peakPrice) * hpShare);
+}
+
+export function getSubscriptionCostForMonths(offer, months) {
+  const duration = Math.max(0, Math.round(safe(months)));
+  if (!duration) return 0;
+
+  const reducedDuration = Math.min(
+    duration,
+    Math.max(0, Math.round(safe(offer?.reduced_subscription_duration_months)))
+  );
+  const fullDuration = Math.max(0, duration - reducedDuration);
+
+  return (
+    (reducedDuration * safe(offer?.reduced_monthly_subscription_eur)) +
+    (fullDuration * safe(offer?.full_monthly_subscription_eur))
+  );
+}
+
+export function getChargingStationPrice(offer, timing = "after") {
+  const preferred =
+    timing === "before"
+      ? offer?.charger_7_4kw_price_before_installation_eur
+      : offer?.charger_7_4kw_price_after_installation_eur;
+
+  if (Number.isFinite(preferred)) {
+    return { price: preferred, exact: true };
+  }
+
+  const fallback =
+    timing === "before"
+      ? offer?.charger_7_4kw_price_after_installation_eur
+      : offer?.charger_7_4kw_price_before_installation_eur;
+
+  return {
+    price: Number.isFinite(fallback) ? fallback : 0,
+    exact: false,
+  };
+}
+
+export function getOffPeakSharePercent(vehicle, kmCity, kmHighway) {
+  if (isFiniteNumber(vehicle?.homeOffPeakShare)) {
+    return clamp(Number(vehicle.homeOffPeakShare), 0, 100);
+  }
+
+  const totalKm = safe(kmCity) + safe(kmHighway);
+  if (!totalKm) return 0;
+
+  return clamp((safe(kmCity) / totalKm) * 100, 0, 100);
+}
+
+export function getBestResidenceChargingOffer(vehicle, kmCity, kmHighway) {
+  const annualKwh = getAnnualEnergyUsage(
+    vehicle?.cityConsumption,
+    vehicle?.highwayConsumption,
+    kmCity,
+    kmHighway
+  );
+
+  if (!annualKwh) return null;
+
+  const offPeakShare = getOffPeakSharePercent(vehicle, kmCity, kmHighway);
+
+  return chargingOffers
+    .map((offer) => {
+      const blendedPrice = getBlendedElectricityPrice(
+        offer.hc_price_eur_per_kwh,
+        offer.hp_price_eur_per_kwh,
+        offPeakShare
+      );
+      const energyYearly = annualKwh * blendedPrice;
+      const subscriptionYearly = getSubscriptionCostForMonths(offer, 12);
+      const totalYearly = energyYearly + subscriptionYearly;
+
+      return {
+        offerId: offer.id,
+        provider: offer.provider,
+        offerName: offer.offer_name,
+        label: `${offer.provider} ${offer.offer_name}`,
+        blendedPrice,
+        offPeakShare,
+        energyYearly,
+        subscriptionYearly,
+        totalYearly,
+      };
+    })
+    .sort((left, right) => left.totalYearly - right.totalYearly)[0] ?? null;
+}
+
+export function getEnergyUsageBreakdown(vehicle, kmCity, kmHighway) {
+  const type = vehicle?.type;
+
+  if (type === "electric") {
+    if (vehicle?.chargingSetup === "residence") {
+      const bestResidenceOffer = getBestResidenceChargingOffer(vehicle, kmCity, kmHighway);
+      if (bestResidenceOffer) {
+        return {
+          energyYearly: bestResidenceOffer.energyYearly,
+          subscriptionYearly: bestResidenceOffer.subscriptionYearly,
+          totalYearly: bestResidenceOffer.totalYearly,
+          effectivePrice: bestResidenceOffer.blendedPrice,
+          offPeakShare: bestResidenceOffer.offPeakShare,
+          residenceOfferLabel: bestResidenceOffer.label,
+        };
+      }
+    }
+
+    const annualKwh = getAnnualEnergyUsage(
+      vehicle?.cityConsumption,
+      vehicle?.highwayConsumption,
+      kmCity,
+      kmHighway
+    );
+    const hasDualRate = isFiniteNumber(vehicle?.hcPrice) || isFiniteNumber(vehicle?.hpPrice);
+    const offPeakShare = getOffPeakSharePercent(vehicle, kmCity, kmHighway);
+    const effectivePrice = hasDualRate
+      ? getBlendedElectricityPrice(vehicle?.hcPrice, vehicle?.hpPrice, offPeakShare)
+      : safe(vehicle?.energyPrice);
+    const energyYearly = annualKwh * effectivePrice;
+
+    return {
+      energyYearly,
+      subscriptionYearly: 0,
+      totalYearly: energyYearly,
+      effectivePrice,
+      offPeakShare,
+      residenceOfferLabel: null,
+    };
+  }
+
+  const energyYearly = getFuelCostPerYear(vehicle, kmCity, kmHighway);
+  return {
+    energyYearly,
+    subscriptionYearly: 0,
+    totalYearly: energyYearly,
+    effectivePrice: safe(vehicle?.energyPrice),
+    offPeakShare: null,
+    residenceOfferLabel: null,
+  };
 }
 
 export function getFuelCostPerYear(vehicle, kmCity, kmHighway) {
@@ -15,16 +186,22 @@ export function getFuelCostPerYear(vehicle, kmCity, kmHighway) {
 }
 
 export function getTotalUsageCost(vehicle, kmCity, kmHighway) {
-  const fuel = getFuelCostPerYear(vehicle, kmCity, kmHighway);
-  const maintenance = vehicle.type === "electric" ? 400 : 900;
+  const breakdown = getEnergyUsageBreakdown(vehicle, kmCity, kmHighway);
+  const fuel = breakdown.energyYearly;
+  const subscription = breakdown.subscriptionYearly;
+  const maintenance = vehicle.type === "electric" ? 150 : 900;
 
-  const total = fuel + maintenance;
+  const total = breakdown.totalYearly + maintenance;
 
   return {
     yearly: total,
     monthly: total / 12,
     fuel,
+    chargingSubscription: subscription,
     maintenance,
+    effectiveEnergyPrice: breakdown.effectivePrice,
+    offPeakShare: breakdown.offPeakShare,
+    residenceOfferLabel: breakdown.residenceOfferLabel,
   };
 }
 
