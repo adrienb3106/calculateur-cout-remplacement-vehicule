@@ -41,6 +41,21 @@ export default function App() {
   useEffect(() => { save("kmHighway", kmHighway); }, [kmHighway]);
   useEffect(() => { save("activePage", page); }, [page]);
 
+  const pageContent = {
+    comparateur: {
+      kicker: "Page 1",
+      title: "Comparateur de coût",
+      description:
+        "Renseignez votre véhicule actuel, le véhicule visé et le financement pour comparer votre budget mensuel.",
+    },
+    recharge: {
+      kicker: "Page 2",
+      title: "Recharge et rentabilité VE",
+      description:
+        "Analysez les solutions de recharge avec la même structure visuelle et les mêmes repères que sur le comparateur.",
+    },
+  };
+
   return (
     <div className="container">
       <div className="app-header">
@@ -65,6 +80,12 @@ export default function App() {
 
       {page === "comparateur" && (
         <>
+          <div className="card page-banner">
+            <p className="page-banner-kicker">{pageContent.comparateur.kicker}</p>
+            <h2 className="page-banner-title">{pageContent.comparateur.title}</h2>
+            <p className="page-banner-text">{pageContent.comparateur.description}</p>
+          </div>
+
           <div className="card">
             <h2>{t.situation}</h2>
 
@@ -143,14 +164,22 @@ export default function App() {
       )}
 
       {page === "recharge" && (
-        <ChargingAnalysis
-          oldCar={oldCar}
-          newCar={newCar}
-          oldType={oldType}
-          newType={newType}
-          kmCity={kmCity}
-          kmHighway={kmHighway}
-        />
+        <>
+          <div className="card page-banner">
+            <p className="page-banner-kicker">{pageContent.recharge.kicker}</p>
+            <h2 className="page-banner-title">{pageContent.recharge.title}</h2>
+            <p className="page-banner-text">{pageContent.recharge.description}</p>
+          </div>
+
+          <ChargingAnalysis
+            oldCar={oldCar}
+            newCar={newCar}
+            oldType={oldType}
+            newType={newType}
+            kmCity={kmCity}
+            kmHighway={kmHighway}
+          />
+        </>
       )}
 
       <footer className="app-footer">

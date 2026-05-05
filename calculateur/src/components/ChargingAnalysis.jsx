@@ -496,8 +496,11 @@ export default function ChargingAnalysis({
   return (
     <div>
       <div className="card">
-        <h1 className="charging-page-title">Solution collective en copropriété</h1>
-        <h2>Recharge du véhicule électrique</h2>
+        <h2>Paramètres de recharge</h2>
+        <p className="card-copy">
+          Cette page réutilise les données du comparateur pour estimer le coût de recharge et la rentabilité
+          d&apos;usage du véhicule électrique.
+        </p>
 
         {comparatorMissingFields.length > 0 && (
           <div className="charging-warning-box">
@@ -754,9 +757,9 @@ export default function ChargingAnalysis({
         <div className="card result">
           <div className="charging-section-header">
             <div>
-              <h2>Rentabilit? d'usage du VE</h2>
+              <h2>Rentabilité d&apos;usage du VE</h2>
               <p className="charging-section-note">
-                Synth?se avec la meilleure solution actuelle : {summaryOffer.solutionLabel}.
+                Synthèse avec la meilleure solution actuelle : {summaryOffer.solutionLabel}.
               </p>
             </div>
           </div>
@@ -766,10 +769,10 @@ export default function ChargingAnalysis({
               <span className="charging-summary-label">Recharge mensuelle lisse</span>
               <strong>{formatCurrency(summaryOffer.chargingMonthly)}</strong>
               <span className="charging-summary-sub">
-                ?nergie + abonnement + borne amortie sur {effectiveMonths} mois
+                Énergie + abonnement + borne amortie sur {effectiveMonths} mois
               </span>
               <span className="charging-summary-sub">
-                La borne est liss?e sur {effectiveMonths} mois dans ce calcul.
+                La borne est lissée sur {effectiveMonths} mois dans ce calcul.
               </span>
             </div>
             <div className="charging-summary-card">
@@ -779,21 +782,21 @@ export default function ChargingAnalysis({
                 Recharge lisse + entretien
               </span>
               <span className="charging-summary-sub">
-                Calcul limit? aux trajets quotidiens. Les recharges et pleins li?s aux gros trajets ne sont pas pris en compte.
+                Calcul limité aux trajets quotidiens. Les recharges et pleins liés aux gros trajets ne sont pas pris en compte.
               </span>
             </div>
             <div className="charging-summary-card">
               <span className="charging-summary-label">Usage VE / an</span>
               <strong>{formatCompactCurrency(summaryOffer.usageYearly)}</strong>
               <span className="charging-summary-sub">
-                Ramen? en co?t annuel moyen
+                Ramené en coût annuel moyen
               </span>
             </div>
             <div className="charging-summary-card">
-              <span className="charging-summary-label">D?pense r?elle 1?re ann?e</span>
+              <span className="charging-summary-label">Dépense réelle 1re année</span>
               <strong>{formatCompactCurrency(summaryOffer.firstYearUsage)}</strong>
               <span className="charging-summary-sub">
-                ?nergie + abonnement + entretien + borne
+                Énergie + abonnement + entretien + borne
               </span>
             </div>
           </div>
@@ -804,7 +807,7 @@ export default function ChargingAnalysis({
                 <span className="charging-comparison-title">Base de calcul</span>
                 <strong>{formatCurrency(summaryOffer.usageMonthly)} / mois</strong>
                 <span className="charging-comparison-text">
-                  Renseignez un VE dans l'app principale pour comparer automatiquement vos co?ts d'usage.
+                  Renseignez un VE dans l'app principale pour comparer automatiquement vos coûts d'usage.
                 </span>
               </div>
             )}
@@ -814,13 +817,13 @@ export default function ChargingAnalysis({
             <div className="charging-chart-block">
               <div className="charging-section-header">
                 <div>
-                  <h3 className="charging-chart-title">Comparaison graphique avec le v?hicule actuel</h3>
+                  <h3 className="charging-chart-title">Comparaison graphique avec le véhicule actuel</h3>
                   <p className="charging-chart-subtitle">
                     {comparisonMode === "full"
-                      ? "Vue mensuelle de l'usage complet, avec toutes les informations de la page 1 hors pr?t lorsqu'elles sont renseign?es."
+                      ? "Vue mensuelle de l'usage complet, avec toutes les informations de la page 1 hors prêt lorsqu'elles sont renseignées."
                       : comparisonMode === "recharge_borne"
                         ? "Vue mensuelle de la recharge du VE avec abonnement et borne amortie."
-                        : "Vue mensuelle de la recharge du VE : ?nergie et abonnement."}
+                        : "Vue mensuelle de la recharge du VE : Énergie et abonnement."}
                   </p>
                 </div>
                 <div className="charging-comparison-actions">
@@ -848,7 +851,7 @@ export default function ChargingAnalysis({
                     </button>
                   </div>
                   <span className={displayedVsOldVehicle <= 0 ? "charging-best-badge" : "charging-best-badge charging-badge-negative"}>
-                    ?cart: {displayedVsOldVehicle > 0 ? "+" : ""}{formatCurrency(displayedVsOldVehicle)} / mois
+                    Écart: {displayedVsOldVehicle > 0 ? "+" : ""}{formatCurrency(displayedVsOldVehicle)} / mois
                   </span>
                 </div>
               </div>
@@ -876,7 +879,7 @@ export default function ChargingAnalysis({
 
           {!currentVehicleChartData.length && oldUsageForWeeklyKm && (
             <div className="charging-comparison-card charging-comparison-card-wide">
-              <span className="charging-comparison-title">Vs v?hicule actuel</span>
+              <span className="charging-comparison-title">Vs véhicule actuel</span>
               <strong className={displayedVsOldVehicle <= 0 ? "charging-positive" : "charging-negative"}>
                 {displayedVsOldVehicle <= 0 ? "" : "+"}
                 {formatCurrency(displayedVsOldVehicle)}
@@ -895,10 +898,10 @@ export default function ChargingAnalysis({
               <span className="charging-comparison-title">Lecture</span>
               <span className="charging-comparison-text">
                 {comparisonMode === "full"
-                  ? "Le graphique compare le v?hicule actuel ? la solution VE retenue avec toutes les informations d'usage disponibles de la page 1, hors pr?t. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'?quation."
+                  ? "Le graphique compare le véhicule actuel à la solution VE retenue avec toutes les informations d'usage disponibles de la page 1, hors prêt. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'équation."
                   : comparisonMode === "recharge_borne"
-                    ? "Le graphique compare le co?t de recharge du VE avec abonnement et borne amortie, face au co?t de carburant ou de recharge du v?hicule actuel. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'?quation."
-                    : "Le graphique compare le co?t de recharge du VE, donc ?nergie et abonnement, face au co?t de carburant ou de recharge du v?hicule actuel. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'?quation."}
+                    ? "Le graphique compare le coût de recharge du VE avec abonnement et borne amortie, face au coût de carburant ou de recharge du véhicule actuel. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'équation."
+                    : "Le graphique compare le coût de recharge du VE, donc Énergie et abonnement, face au coût de carburant ou de recharge du véhicule actuel. Il ne porte que sur les usages quotidiens et exclut les longs trajets de l'équation."}
               </span>
             </div>
           )}
