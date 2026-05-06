@@ -5,6 +5,7 @@ import FinancingForm from "./components/FinancingForm";
 import Results from "./components/Results";
 import DepreciationChart from "./components/DepreciationChart";
 import ChargingAnalysis from "./components/ChargingAnalysis";
+import CalculationDetails from "./components/CalculationDetails";
 import { useT } from "./i18n";
 import "./style.css";
 
@@ -51,6 +52,11 @@ export default function App() {
       title: "Recharge et rentabilité VE",
       description:
         "Analysez les solutions de recharge avec la même structure visuelle et les mêmes repères que sur le comparateur.",
+    },
+    details: {
+      title: "Détail des calculs",
+      description:
+        "Comprenez les formules utilisées par le logiciel avec une lecture explicative et des exemples issus de votre saisie.",
     },
   };
 
@@ -176,6 +182,37 @@ export default function App() {
             kmHighway={kmHighway}
           />
         </>
+      )}
+
+      {page === "details" && (
+        <>
+          <div className="card page-banner">
+            <h2 className="page-banner-title">{pageContent.details.title}</h2>
+            <p className="page-banner-text">{pageContent.details.description}</p>
+          </div>
+
+          <CalculationDetails
+            oldCar={oldCar}
+            newCar={newCar}
+            oldType={oldType}
+            newType={newType}
+            finance={finance}
+            kmCity={kmCity}
+            kmHighway={kmHighway}
+          />
+        </>
+      )}
+
+      {page !== "details" && (
+        <div className="details-page-link-wrap">
+          <button
+            type="button"
+            className="details-page-link"
+            onClick={() => setPage("details")}
+          >
+            Voir le détail des calculs
+          </button>
+        </div>
       )}
 
       <footer className="app-footer">

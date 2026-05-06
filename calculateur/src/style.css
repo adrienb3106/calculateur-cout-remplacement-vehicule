@@ -546,7 +546,7 @@ input[type="range"] {
   background: #f1f5f9;
   border-radius: 12px;
   padding: 4px;
-  max-width: 520px;
+  max-width: 760px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -573,6 +573,29 @@ input[type="range"] {
   color: #3b82f6;
   font-weight: 700;
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.details-page-link-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 22px 0 8px;
+}
+
+.details-page-link {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 999px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.details-page-link:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 /* ===== Trip comparison page ===== */
@@ -1039,8 +1062,82 @@ input[type="range"] {
   color: #dc2626;
 }
 
+.calc-kpi-grid,
+.calc-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.calc-kpi-grid {
+  margin-bottom: 16px;
+}
+
+.calc-kpi,
+.calc-detail-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.calc-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.calc-kpi-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.calc-detail-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.calc-formula {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.calc-detail-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.calc-detail-copy p {
+  margin: 0;
+}
+
+.calc-detail-copy strong {
+  color: #0f172a;
+}
+
 @media (max-width: 600px) {
   .charging-grid,
+  .calc-kpi-grid,
+  .calc-detail-grid,
   .charging-kpis,
   .charging-summary-grid,
   .charging-comparison-grid {

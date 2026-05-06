@@ -189,7 +189,9 @@ export function getTotalUsageCost(vehicle, kmCity, kmHighway) {
   const breakdown = getEnergyUsageBreakdown(vehicle, kmCity, kmHighway);
   const fuel = breakdown.energyYearly;
   const subscription = breakdown.subscriptionYearly;
-  const maintenance = vehicle.type === "electric" ? 150 : 900;
+  const annualKm = safe(kmCity) + safe(kmHighway);
+  const maintenanceRatePer100Km = vehicle.type === "electric" ? 2 : 6;
+  const maintenance = (annualKm / 100) * maintenanceRatePer100Km;
 
   const total = breakdown.totalYearly + maintenance;
 

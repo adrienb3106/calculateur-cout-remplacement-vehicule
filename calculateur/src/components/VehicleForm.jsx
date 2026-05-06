@@ -4,6 +4,9 @@ import chargingOffers from "../../tarifs.json";
 
 const DEFAULT_INDIVIDUAL_OFFER =
   chargingOffers.find((offer) => offer.id === "izi_by_edf") || chargingOffers[0] || null;
+const DEFAULT_THERMAL_CITY_CONSUMPTION = 7;
+const DEFAULT_THERMAL_HIGHWAY_CONSUMPTION = 6;
+const DEFAULT_FUEL_PRICE = 1.8;
 const DEFAULT_ELECTRIC_CITY_CONSUMPTION = 15;
 const DEFAULT_ELECTRIC_HIGHWAY_CONSUMPTION = 20;
 const DEFAULT_HOME_OFF_PEAK_SHARE = 90;
@@ -52,6 +55,31 @@ export default function VehicleForm({ type, data, setData, title, role = "curren
   const showAdvancedElectricOptions = role === "new";
 
   useEffect(() => {
+    if (type === "thermal" && role === "current") {
+      const nextData = { ...data };
+      let hasChanges = false;
+
+      if (!hasPositiveValue(nextData.cityConsumption)) {
+        nextData.cityConsumption = DEFAULT_THERMAL_CITY_CONSUMPTION;
+        hasChanges = true;
+      }
+
+      if (!hasPositiveValue(nextData.highwayConsumption)) {
+        nextData.highwayConsumption = DEFAULT_THERMAL_HIGHWAY_CONSUMPTION;
+        hasChanges = true;
+      }
+
+      if (!hasPositiveValue(nextData.energyPrice)) {
+        nextData.energyPrice = DEFAULT_FUEL_PRICE;
+        hasChanges = true;
+      }
+
+      if (hasChanges) {
+        setData(nextData);
+      }
+      return;
+    }
+
     if (type !== "electric") return;
 
     const nextData = { ...data };

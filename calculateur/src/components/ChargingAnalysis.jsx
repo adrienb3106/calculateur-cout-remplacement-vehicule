@@ -191,8 +191,8 @@ export default function ChargingAnalysis({
   kmCity,
   kmHighway,
 }) {
-  const annualKmFromApp = safe(kmCity) + safe(kmHighway);
   const dailyUseAnnualKm = safe(kmCity);
+  const dailyUseHighwayKm = 0;
   const defaultWeeklyKm = dailyUseAnnualKm ? round(dailyUseAnnualKm / 52, 0) : round(6000 / 52, 0);
   const vehicleChoices = useMemo(
     () => getVehicleChoices(oldCar, newCar, oldType, newType),
@@ -233,8 +233,8 @@ export default function ChargingAnalysis({
           sourceVehicle.cityConsumption,
           sourceVehicle.highwayConsumption,
           kmCity,
-          kmHighway
-        ) || sourceVehicle.cityConsumption || sourceVehicle.highwayConsumption || 18,
+          dailyUseHighwayKm
+        ) || sourceVehicle.cityConsumption || 18,
         1
       )
     : 18;
@@ -270,14 +270,14 @@ export default function ChargingAnalysis({
   const monthlyKwh = (monthlyKm / 100) * safe(evConsumption);
   const yearlyKwh = monthlyKwh * 12;
   const effectiveMonths = Math.max(1, Math.round(safe(horizonMonths)));
-  const maintenanceYearly = getTotalUsageCost({ type: "electric" }, 0, 0).maintenance;
+  const maintenanceYearly = getTotalUsageCost({ type: "electric" }, yearlyKm, dailyUseHighwayKm).maintenance;
 
   const referenceVehicle = sourceVehicle
     ? {
         ...sourceVehicle,
         type: "electric",
         cityConsumption: safe(sourceVehicle.cityConsumption) || safe(evConsumption),
-        highwayConsumption: safe(sourceVehicle.highwayConsumption) || safe(evConsumption),
+        highwayConsumption: safe(sourceVehicle.cityConsumption) || safe(evConsumption),
       }
     : null;
 
@@ -290,7 +290,7 @@ export default function ChargingAnalysis({
           highwayConsumption: safe(evConsumption),
         },
         yearlyKm,
-        0
+        dailyUseHighwayKm
       )
     : null;
 
@@ -298,7 +298,7 @@ export default function ChargingAnalysis({
     ? getTotalUsageCost(
         { ...oldCar, type: oldType },
         yearlyKm,
-        0
+        dailyUseHighwayKm
       )
     : null;
 
@@ -459,8 +459,8 @@ export default function ChargingAnalysis({
   const comparatorMissingFields = useMemo(() => {
     const missing = [];
 
-    if (!annualKmFromApp) {
-      missing.push("kilométrage annuel ville et/ou autoroute");
+    if (!dailyUseAnnualKm) {
+      missing.push("kilométrage annuel ville");
     }
 
     if (!automaticElectricVehicle) {
@@ -468,9 +468,6 @@ export default function ChargingAnalysis({
     } else {
       if (!hasPositive(automaticElectricVehicle.cityConsumption)) {
         missing.push("conso ville du véhicule électrique");
-      }
-      if (!hasPositive(automaticElectricVehicle.highwayConsumption)) {
-        missing.push("conso autoroute du véhicule électrique");
       }
       if ((automaticElectricVehicle.chargingSetup || "individual") === "individual") {
         if (!hasPositive(automaticElectricVehicle.hcPrice)) {
@@ -485,15 +482,12 @@ export default function ChargingAnalysis({
     if (!hasPositive(oldCar?.cityConsumption)) {
       missing.push("conso ville du véhicule actuel");
     }
-    if (!hasPositive(oldCar?.highwayConsumption)) {
-      missing.push("conso autoroute du véhicule actuel");
-    }
     if (!hasPositive(oldCar?.energyPrice)) {
       missing.push("prix de l'énergie du véhicule actuel");
     }
 
     return [...new Set(missing)];
-  }, [annualKmFromApp, automaticElectricVehicle, oldCar]);
+  }, [automaticElectricVehicle, dailyUseAnnualKm, oldCar]);
 
   return (
     <div>
