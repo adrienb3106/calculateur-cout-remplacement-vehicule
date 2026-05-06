@@ -319,10 +319,11 @@ export default function ChargingAnalysis({
         const chargerMonthly = chargerPrice / effectiveMonths;
         const chargingMonthly = energyMonthly + subscriptionMonthly + chargerMonthly;
         const chargingTotal = (energyMonthly * effectiveMonths) + subscriptionTotal + chargerPrice;
-        const yearlySubscription = getSubscriptionCostForMonths(offer, 12);
+        const averageYearlySubscription = subscriptionMonthly * 12;
+        const firstYearSubscription = getSubscriptionCostForMonths(offer, 12);
         const usageMonthly = chargingMonthly + (maintenanceYearly / 12);
-        const usageYearly = (energyYearly + yearlySubscription) + maintenanceYearly + (chargerPrice * (12 / effectiveMonths));
-        const firstYearUsage = energyYearly + yearlySubscription + maintenanceYearly + chargerPrice;
+        const usageYearly = energyYearly + averageYearlySubscription + maintenanceYearly + (chargerPrice * (12 / effectiveMonths));
+        const firstYearUsage = energyYearly + firstYearSubscription + maintenanceYearly + chargerPrice;
 
         return {
           ...offer,

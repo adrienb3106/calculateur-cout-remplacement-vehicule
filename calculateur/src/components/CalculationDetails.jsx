@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SUBSCRIPTION_HORIZON_MONTHS,
   getAverageElectricConsumption,
   getBestResidenceChargingOffer,
   getEnergyUsageBreakdown,
@@ -98,7 +99,12 @@ export default function CalculationDetails({
 
   const newResidenceOffer =
     newVehicle.type === "electric" && newVehicle.chargingSetup === "residence"
-      ? getBestResidenceChargingOffer(newVehicle, annualKmCity, annualKmHighway)
+      ? getBestResidenceChargingOffer(
+          newVehicle,
+          annualKmCity,
+          annualKmHighway,
+          DEFAULT_SUBSCRIPTION_HORIZON_MONTHS
+        )
       : null;
 
   const annualDepreciationRate = getDepreciationRate(newType, annualKmTotal);
@@ -175,15 +181,18 @@ export default function CalculationDetails({
 
           <DetailCard
             title="Recharge en résidence"
-            formula={`pour chaque offre :\ncoût annuel = énergie annuelle × prix pondéré HC/HP + abonnement annuel\nl'offre retenue = celle dont le coût annuel est le plus bas`}
+            formula={`pour chaque offre :\ncoût annuel = énergie annuelle × prix pondéré HC/HP + abonnement annualisé sur ${DEFAULT_SUBSCRIPTION_HORIZON_MONTHS} mois\nl'offre retenue = celle dont le coût annuel moyen est le plus bas`}
           >
             <p>
               Cette logique s'applique seulement si le véhicule neuf électrique est en mode
               <strong> borne en résidence</strong>.
             </p>
             <p>
+              Les mois promotionnels et les mois pleins sont donc lissés avant comparaison.
+            </p>
+            <p>
               {newResidenceOffer
-                ? `Offre actuellement retenue : ${newResidenceOffer.label} pour ${formatCurrency(newResidenceOffer.totalYearly)} / an.`
+                ? `Offre actuellement retenue : ${newResidenceOffer.label} pour ${formatCurrency(newResidenceOffer.totalYearly)} / an en moyenne.`
                 : "Aucune offre résidence n'est retenue actuellement dans votre saisie."}
             </p>
           </DetailCard>

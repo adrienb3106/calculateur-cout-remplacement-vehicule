@@ -1,5 +1,7 @@
 import chargingOffers from "../../tarifs.json";
 
+export const DEFAULT_SUBSCRIPTION_HORIZON_MONTHS = 36;
+
 function safe(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -52,6 +54,11 @@ export function getSubscriptionCostForMonths(offer, months) {
   );
 }
 
+export function getAverageAnnualSubscriptionCost(offer, months = DEFAULT_SUBSCRIPTION_HORIZON_MONTHS) {
+  const duration = Math.max(1, Math.round(safe(months) || DEFAULT_SUBSCRIPTION_HORIZON_MONTHS));
+  return getSubscriptionCostForMonths(offer, duration) * (12 / duration);
+}
+
 export function getChargingStationPrice(offer, timing = "after") {
   const preferred =
     timing === "before"
@@ -84,7 +91,12 @@ export function getOffPeakSharePercent(vehicle, kmCity, kmHighway) {
   return clamp((safe(kmCity) / totalKm) * 100, 0, 100);
 }
 
-export function getBestResidenceChargingOffer(vehicle, kmCity, kmHighway) {
+export function getBestResidenceChargingOffer(
+  vehicle,
+  kmCity,
+  kmHighway,
+  subscriptionHorizonMonths = DEFAULT_SUBSCRIPTION_HORIZON_MONTHS
+) {
   const annualKwh = getAnnualEnergyUsage(
     vehicle?.cityConsumption,
     vehicle?.highwayConsumption,
@@ -104,7 +116,7 @@ export function getBestResidenceChargingOffer(vehicle, kmCity, kmHighway) {
         offPeakShare
       );
       const energyYearly = annualKwh * blendedPrice;
-      const subscriptionYearly = getSubscriptionCostForMonths(offer, 12);
+      const subscriptionYearly = getAverageAnnualSubscriptionCost(offer, subscriptionHorizonMonths);
       const totalYearly = energyYearly + subscriptionYearly;
 
       return {
@@ -116,18 +128,24 @@ export function getBestResidenceChargingOffer(vehicle, kmCity, kmHighway) {
         offPeakShare,
         energyYearly,
         subscriptionYearly,
+        subscriptionHorizonMonths,
         totalYearly,
       };
     })
     .sort((left, right) => left.totalYearly - right.totalYearly)[0] ?? null;
 }
 
-export function getEnergyUsageBreakdown(vehicle, kmCity, kmHighway) {
+export function getEnergyUsageBreakdown(vehicle, kmCity, kmHighway, options = {}) {
   const type = vehicle?.type;
 
   if (type === "electric") {
     if (vehicle?.chargingSetup === "residence") {
-      const bestResidenceOffer = getBestResidenceChargingOffer(vehicle, kmCity, kmHighway);
+      const bestResidenceOffer = getBestResidenceChargingOffer(
+        vehicle,
+        kmCity,
+        kmHighway,
+        options.subscriptionHorizonMonths || options.horizonMonths || DEFAULT_SUBSCRIPTION_HORIZON_MONTHS
+      );
       if (bestResidenceOffer) {
         return {
           energyYearly: bestResidenceOffer.energyYearly,
@@ -212,8 +230,8 @@ export function getMaintenanceBreakdown(vehicle, kmCity, kmHighway) {
   };
 }
 
-export function getTotalUsageCost(vehicle, kmCity, kmHighway) {
-  const breakdown = getEnergyUsageBreakdown(vehicle, kmCity, kmHighway);
+export function getTotalUsageCost(vehicle, kmCity, kmHighway, options = {}) {
+  const breakdown = getEnergyUsageBreakdown(vehicle, kmCity, kmHighway, options);
   const fuel = breakdown.energyYearly;
   const subscription = breakdown.subscriptionYearly;
   const maintenanceBreakdown = getMaintenanceBreakdown(vehicle, kmCity, kmHighway);
