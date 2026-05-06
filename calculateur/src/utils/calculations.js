@@ -1,6 +1,7 @@
 import chargingOffers from "../../tarifs.json";
 
 export const DEFAULT_SUBSCRIPTION_HORIZON_MONTHS = 36;
+export const DEFAULT_ENERGY_INFLATION_RATE = 0.02;
 
 function safe(v) {
   const n = Number(v);
@@ -13,6 +14,10 @@ function isFiniteNumber(v) {
 
 function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v));
+}
+
+function getNormalisedHorizonMonths(months) {
+  return Math.max(1, Math.round(safe(months) || DEFAULT_SUBSCRIPTION_HORIZON_MONTHS));
 }
 
 export function getAnnualEnergyUsage(cityConsumption, highwayConsumption, kmCity, kmHighway) {
@@ -55,8 +60,23 @@ export function getSubscriptionCostForMonths(offer, months) {
 }
 
 export function getAverageAnnualSubscriptionCost(offer, months = DEFAULT_SUBSCRIPTION_HORIZON_MONTHS) {
-  const duration = Math.max(1, Math.round(safe(months) || DEFAULT_SUBSCRIPTION_HORIZON_MONTHS));
+  const duration = getNormalisedHorizonMonths(months);
   return getSubscriptionCostForMonths(offer, duration) * (12 / duration);
+}
+
+export function getInflatedAnnualCostTotal(
+  annualCost,
+  months,
+  annualInflationRate = DEFAULT_ENERGY_INFLATION_RATE
+) {
+  const duration = getNormalisedHorizonMonths(months);
+  const monthlyBase = safe(annualCost) / 12;
+  const rate = safe(annualInflationRate);
+
+  return Array.from({ length: duration }, (_, index) => {
+    const yearIndex = Math.floor(index / 12);
+    return monthlyBase * Math.pow(1 + rate, yearIndex);
+  }).reduce((sum, value) => sum + value, 0);
 }
 
 export function getChargingStationPrice(offer, timing = "after") {
@@ -236,8 +256,9 @@ export function getTotalUsageCost(vehicle, kmCity, kmHighway, options = {}) {
   const subscription = breakdown.subscriptionYearly;
   const maintenanceBreakdown = getMaintenanceBreakdown(vehicle, kmCity, kmHighway);
   const maintenance = maintenanceBreakdown.maintenance;
+  const insurance = safe(vehicle?.insuranceYearly);
 
-  const total = breakdown.totalYearly + maintenance;
+  const total = breakdown.totalYearly + maintenance + insurance;
 
   return {
     yearly: total,
@@ -245,6 +266,7 @@ export function getTotalUsageCost(vehicle, kmCity, kmHighway, options = {}) {
     fuel,
     chargingSubscription: subscription,
     maintenance,
+    insurance,
     maintenanceBase: maintenanceBreakdown.baseMaintenance,
     maintenanceFactor: maintenanceBreakdown.factor,
     maintenanceAgeSurcharge: maintenanceBreakdown.ageSurcharge,
@@ -265,6 +287,56 @@ export function getLoanMonthly(amount, rate, durationMonths) {
   return (amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -n));
 }
 
+export function getLoanRemainingBalance(amount, rate, durationMonths, paidMonths) {
+  const principal = Math.max(0, safe(amount));
+  const n = Math.max(0, Math.round(safe(durationMonths)));
+  const paid = Math.min(n, Math.max(0, Math.round(safe(paidMonths))));
+  const remainingMonths = Math.max(0, n - paid);
+
+  if (!principal || !remainingMonths) return 0;
+  if (!n) return 0;
+  if (safe(rate) === 0) return principal * (remainingMonths / n);
+
+  const monthlyRate = safe(rate) / 100 / 12;
+  const growthTotal = Math.pow(1 + monthlyRate, n);
+  const growthPaid = Math.pow(1 + monthlyRate, paid);
+
+  return principal * ((growthTotal - growthPaid) / (growthTotal - 1));
+}
+
+export function getDepreciationRate(type, annualKm) {
+  const baseRate = type === "electric" ? 0.20 : 0.15;
+  const kmPenalty = Math.max(0, (safe(annualKm) - 15000) / 10000) * 0.02;
+  return Math.min(0.40, baseRate + kmPenalty);
+}
+
+export function getEstimatedVehicleValue(vehicle, annualKm, yearsFromNow = 0) {
+  const price = safe(vehicle?.purchasePrice);
+  if (!price) return 0;
+
+  const currentYear = new Date().getFullYear();
+  const registrationYear = safe(vehicle?.year) || currentYear;
+  const purchaseYear = safe(vehicle?.purchaseYear) || registrationYear;
+  const rate = getDepreciationRate(vehicle?.type, annualKm);
+  const ageAtPurchase = Math.max(0, purchaseYear - registrationYear);
+  const valueAtRegistration = price / Math.pow(1 - rate, ageAtPurchase);
+  const targetYear = currentYear + Math.max(0, safe(yearsFromNow));
+  const targetAge = Math.max(0, targetYear - registrationYear);
+
+  return Math.round(Math.max(0, valueAtRegistration * Math.pow(1 - rate, targetAge)));
+}
+
+export function getVehicleValueLoss(vehicle, annualKm, horizonMonths = DEFAULT_SUBSCRIPTION_HORIZON_MONTHS) {
+  const currentValue = getEstimatedVehicleValue(vehicle, annualKm, 0);
+  const residualValue = getEstimatedVehicleValue(vehicle, annualKm, safe(horizonMonths) / 12);
+
+  return {
+    currentValue,
+    residualValue,
+    valueLoss: Math.max(0, currentValue - residualValue),
+  };
+}
+
 export function getDepreciationCurve(vehicle, annualKm, yearsAhead = 10) {
   const price = safe(vehicle.purchasePrice);
   if (!price) return [];
@@ -274,9 +346,7 @@ export function getDepreciationCurve(vehicle, annualKm, yearsAhead = 10) {
   const purchaseYear = safe(vehicle.purchaseYear) || registrationYear;
 
   // Taux annuel selon le type + kilométrage
-  const baseRate = vehicle.type === "electric" ? 0.20 : 0.15;
-  const kmPenalty = Math.max(0, (annualKm - 15000) / 10000) * 0.02;
-  const rate = Math.min(0.40, baseRate + kmPenalty);
+  const rate = getDepreciationRate(vehicle.type, annualKm);
 
   // La valeur au moment de l'achat = price
   // On remonte jusqu'à l'immatriculation pour afficher la courbe complète
@@ -341,20 +411,104 @@ export function getHorizonCashCost({
   horizonMonths = 36,
   loanMonths = 0,
   oneShotCosts = 0,
+  downPayment = 0,
+  energyInflationRate = DEFAULT_ENERGY_INFLATION_RATE,
+  upfrontPurchase = 0,
 }) {
-  const months = Math.max(1, Math.round(safe(horizonMonths) || 36));
+  const months = getNormalisedHorizonMonths(horizonMonths);
   const activeLoanMonths = Math.min(months, Math.max(0, Math.round(safe(loanMonths))));
-  const usageTotal = safe(usageCost?.monthly) * months;
+  const energyTotal = getInflatedAnnualCostTotal(usageCost?.fuel, months, energyInflationRate);
+  const subscriptionTotal = (safe(usageCost?.chargingSubscription) / 12) * months;
+  const maintenanceTotal = (safe(usageCost?.maintenance) / 12) * months;
+  const insuranceTotal = (safe(usageCost?.insurance) / 12) * months;
+  const usageTotal = energyTotal + subscriptionTotal + maintenanceTotal + insuranceTotal;
   const loanTotal = safe(financing?.monthlyLoan) * activeLoanMonths;
   const oneShotTotal = safe(oneShotCosts);
-  const total = usageTotal + loanTotal + oneShotTotal;
+  const downPaymentTotal = safe(downPayment);
+  const upfrontPurchaseTotal = safe(upfrontPurchase);
+  const total = usageTotal + loanTotal + oneShotTotal + downPaymentTotal + upfrontPurchaseTotal;
 
   return {
     horizonMonths: months,
+    energyTotal,
+    subscriptionTotal,
+    maintenanceTotal,
+    insuranceTotal,
     usageTotal,
     loanTotal,
     oneShotTotal,
+    downPaymentTotal,
+    upfrontPurchaseTotal,
     total,
     averageMonthly: total / months,
+  };
+}
+
+export function getOwnershipCost({
+  vehicle,
+  kmCity,
+  kmHighway,
+  finance = {},
+  horizonMonths = DEFAULT_SUBSCRIPTION_HORIZON_MONTHS,
+  oneShotCosts = 0,
+  mode = "keep",
+  tradeInValue = 0,
+  retainedVehicle = null,
+  energyInflationRate = DEFAULT_ENERGY_INFLATION_RATE,
+}) {
+  const months = getNormalisedHorizonMonths(horizonMonths);
+  const annualKm = safe(kmCity) + safe(kmHighway);
+  const usageCost = getTotalUsageCost(vehicle, kmCity, kmHighway, { horizonMonths: months });
+  const financing = getFinancing(finance);
+  const loanMonths = safe(finance?.duration);
+  const hasLoan = loanMonths > 0 && financing.monthlyLoan > 0;
+  const upfrontPurchase = mode === "acquire" && !hasLoan ? financing.finalPrice : 0;
+  const downPayment = mode === "acquire" ? safe(finance?.apport) : 0;
+  const paidLoanMonths = mode === "acquire" ? Math.min(months, loanMonths) : 0;
+  const remainingLoanBalance = mode === "acquire"
+    ? getLoanRemainingBalance(financing.finalPrice, finance?.rate, loanMonths, paidLoanMonths)
+    : 0;
+  const cash = getHorizonCashCost({
+    usageCost,
+    financing: mode === "acquire" ? financing : {},
+    horizonMonths: months,
+    loanMonths: mode === "acquire" ? loanMonths : 0,
+    oneShotCosts,
+    downPayment,
+    energyInflationRate,
+    upfrontPurchase,
+  });
+  const value = getVehicleValueLoss(vehicle, annualKm, months);
+  const retainedValue = retainedVehicle ? getVehicleValueLoss(retainedVehicle, annualKm, months) : null;
+  const retainedAssetCost = retainedValue ? retainedValue.valueLoss : 0;
+  const tradeInOpportunityCost = mode === "acquire" ? safe(tradeInValue) : 0;
+  const netCost = mode === "acquire"
+    ? cash.total + remainingLoanBalance - value.residualValue + tradeInOpportunityCost + retainedAssetCost
+    : cash.total + value.valueLoss;
+
+  return {
+    monthlyCash: usageCost.monthly + (mode === "acquire" ? financing.monthlyLoan : 0),
+    averageMonthlyCash: cash.averageMonthly,
+    firstYear: getInflatedAnnualCostTotal(usageCost.fuel, 12, energyInflationRate) +
+      usageCost.chargingSubscription +
+      usageCost.maintenance +
+      usageCost.insurance +
+      (mode === "acquire" ? financing.monthlyLoan * Math.min(12, loanMonths) : 0) +
+      safe(oneShotCosts) +
+      downPayment +
+      upfrontPurchase,
+    horizonMonths: months,
+    horizonTotal: cash.total,
+    residualValue: value.residualValue,
+    currentValue: value.currentValue,
+    valueLoss: value.valueLoss,
+    remainingLoanBalance,
+    retainedResidualValue: retainedValue?.residualValue || 0,
+    retainedValueLoss: retainedAssetCost,
+    tradeInOpportunityCost,
+    netCost,
+    usageCost,
+    financing,
+    cash,
   };
 }

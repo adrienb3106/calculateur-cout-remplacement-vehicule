@@ -14,7 +14,7 @@ import {
 import {
   getTotalUsageCost,
   getFinancing,
-  getHorizonCashCost,
+  getOwnershipCost,
 } from "../utils/calculations";
 
 const fmt = (v) => (Number.isFinite(v) ? v.toFixed(2) : "—");
@@ -24,6 +24,7 @@ const COLORS = {
   fuel: "#3b82f6",
   subscription: "#8b5cf6",
   maintenance: "#10b981",
+  insurance: "#64748b",
   loan: "#f59e0b",
 };
 
@@ -77,18 +78,26 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
   const hasChargingSubscription = oldCost.chargingSubscription > 0 || newCost.chargingSubscription > 0;
   const loanMonths = finance.duration || 0;
   const horizonMonths = loanMonths > 0 ? loanMonths : 36;
-  const oldHorizonCost = getHorizonCashCost({
-    usageCost: oldCost,
+  const oldOwnership = getOwnershipCost({
+    vehicle: oldCar,
+    kmCity,
+    kmHighway,
     horizonMonths,
+    mode: "keep",
   });
-  const newHorizonCost = getHorizonCashCost({
-    usageCost: newCost,
-    financing,
+  const newOwnership = getOwnershipCost({
+    vehicle: newCar,
+    kmCity,
+    kmHighway,
+    finance,
     horizonMonths,
-    loanMonths,
+    mode: "acquire",
     oneShotCosts: charger,
+    tradeInValue: finance.withTradeIn ? finance.tradeIn : 0,
+    retainedVehicle: finance.withTradeIn ? null : oldCar,
   });
-  const horizonDiff = newHorizonCost.total - oldHorizonCost.total;
+  const monthlyGapWithLoan = totalNewWithLoan - totalOld;
+  const monthlyGapAfterLoan = totalNewAfterLoan - totalOld;
 
   const chartData = [
     {
@@ -96,6 +105,7 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
       Carburant: oldCost.fuel / 12,
       Abonnement: oldCost.chargingSubscription / 12,
       Entretien: oldCost.maintenance / 12,
+      Assurance: oldCost.insurance / 12,
       Prêt: 0,
     },
     {
@@ -103,6 +113,7 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
       Carburant: newCost.fuel / 12,
       Abonnement: newCost.chargingSubscription / 12,
       Entretien: newCost.maintenance / 12,
+      Assurance: newCost.insurance / 12,
       Prêt: financing.monthlyLoan,
     },
     {
@@ -110,52 +121,73 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
       Carburant: newCost.fuel / 12,
       Abonnement: newCost.chargingSubscription / 12,
       Entretien: newCost.maintenance / 12,
+      Assurance: newCost.insurance / 12,
       Prêt: 0,
     },
   ];
 
   const SEARCH_HORIZON = 25;
-  const OLD_MAINT_GROWTH = oldCar.type === "thermal" ? 0.06 : 0;
 
   function calcCumul(year) {
     const months = year * 12;
-    const activeLoanMonths = Math.min(months, loanMonths);
-    let cumOld = 0;
-    const fuelMonthlyOld = (oldCost.fuel + oldCost.chargingSubscription) / 12;
-    const baseMaintenanceMonthlyOld = oldCost.maintenance / 12;
-    for (let y = 1; y <= year; y++) {
-      const yearlyMaint = baseMaintenanceMonthlyOld * 12 * Math.pow(1 + OLD_MAINT_GROWTH, y - 1);
-      cumOld += 12 * fuelMonthlyOld + yearlyMaint;
-    }
-    const cumNew =
-      activeLoanMonths * (newCost.monthly + financing.monthlyLoan) +
-      Math.max(0, months - loanMonths) * newCost.monthly +
-      charger;
-    return { cumOld: Math.round(cumOld), cumNew: Math.round(cumNew) };
+    const activeLoanMonths = Math.min(months, Math.max(0, loanMonths));
+    const oldMonthlyCumul = totalOld * months;
+    const newMonthlyCumul = (totalNewAfterLoan * months) + (financing.monthlyLoan * activeLoanMonths);
+    const oldCumulOwnership = getOwnershipCost({
+      vehicle: oldCar,
+      kmCity,
+      kmHighway,
+      horizonMonths: months,
+      mode: "keep",
+    });
+    const newCumulOwnership = getOwnershipCost({
+      vehicle: newCar,
+      kmCity,
+      kmHighway,
+      finance,
+      horizonMonths: months,
+      mode: "acquire",
+      oneShotCosts: charger,
+      tradeInValue: finance.withTradeIn ? finance.tradeIn : 0,
+      retainedVehicle: finance.withTradeIn ? null : oldCar,
+    });
+
+    return {
+      cumOld: Math.round(oldCumulOwnership.netCost),
+      cumNew: Math.round(newCumulOwnership.netCost),
+      monthlyOld: Math.round(oldMonthlyCumul),
+      monthlyNew: Math.round(newMonthlyCumul),
+    };
   }
 
-  let cumulBreakevenYear = null;
+  let ownershipBreakevenYear = null;
+  let monthlyBreakevenYear = null;
   for (let y = 1; y <= SEARCH_HORIZON; y++) {
-    const { cumOld, cumNew } = calcCumul(y);
-    if (cumNew <= cumOld) { cumulBreakevenYear = y; break; }
+    const { cumOld, cumNew, monthlyOld, monthlyNew } = calcCumul(y);
+    if (!ownershipBreakevenYear && cumNew <= cumOld) ownershipBreakevenYear = y;
+    if (!monthlyBreakevenYear && monthlyNew <= monthlyOld) monthlyBreakevenYear = y;
+    if (ownershipBreakevenYear && monthlyBreakevenYear) break;
   }
 
-  const cumulBreakeven = cumulBreakevenYear
-    ? `${cumulBreakevenYear} an${cumulBreakevenYear > 1 ? "s" : ""}`
+  const monthlyBreakeven = monthlyBreakevenYear
+    ? `${monthlyBreakevenYear} an${monthlyBreakevenYear > 1 ? "s" : ""}`
+    : null;
+  const ownershipBreakeven = ownershipBreakevenYear
+    ? `${ownershipBreakevenYear} an${ownershipBreakevenYear > 1 ? "s" : ""}`
     : null;
 
   const maxYears = Math.min(
     SEARCH_HORIZON,
-    Math.max(Math.ceil(loanMonths / 12) + 5, cumulBreakevenYear ? cumulBreakevenYear + 2 : 10, 10)
+    Math.max(Math.ceil(loanMonths / 12) + 5, monthlyBreakevenYear ? monthlyBreakevenYear + 2 : 10, 10)
   );
 
   const cumulData = Array.from({ length: maxYears }, (_, i) => {
     const year = i + 1;
-    const { cumOld, cumNew } = calcCumul(year);
+    const { monthlyOld: cashOld, monthlyNew: cashNew } = calcCumul(year);
     return {
       name: `${year} an${year > 1 ? "s" : ""}`,
-      "Ancien véhicule": cumOld,
-      "Nouveau véhicule": cumNew,
+      "Ancien véhicule": cashOld,
+      "Nouveau véhicule": cashNew,
     };
   });
 
@@ -181,23 +213,42 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
         </div>
         <div className="result-horizon-card">
           <span className="result-horizon-label">Ancien véhicule</span>
-          <strong>{fmtMoney(oldHorizonCost.total)}</strong>
+          <strong>{fmtMoney(oldOwnership.netCost)}</strong>
           <span className="result-horizon-note">
-            Usage cumulé sur l'horizon
+            Cash {fmtMoney(oldOwnership.horizonTotal)}
+          </span>
+          <span className="result-horizon-note">
+            Décote {fmtMoney(oldOwnership.valueLoss)}
           </span>
         </div>
         <div className="result-horizon-card">
           <span className="result-horizon-label">Nouveau véhicule</span>
-          <strong>{fmtMoney(newHorizonCost.total)}</strong>
+          <strong>{fmtMoney(newOwnership.netCost)}</strong>
           <span className="result-horizon-note">
-            Usage + prêt + coûts uniques
+            Cash {fmtMoney(newOwnership.horizonTotal)}
           </span>
-        </div>
-        <div className={horizonDiff <= 0 ? "result-horizon-card result-horizon-good" : "result-horizon-card result-horizon-bad"}>
-          <span className="result-horizon-label">Écart horizon</span>
-          <strong>{horizonDiff > 0 ? "+" : ""}{fmtMoney(horizonDiff)}</strong>
+          {newOwnership.cash.downPaymentTotal > 0 && (
+            <span className="result-horizon-note">
+              Apport {fmtMoney(newOwnership.cash.downPaymentTotal)}
+            </span>
+          )}
           <span className="result-horizon-note">
-            Hors valeur de revente
+            Résiduel {fmtMoney(newOwnership.residualValue)}
+          </span>
+          {newOwnership.remainingLoanBalance > 0 && (
+            <span className="result-horizon-note">
+              Dette restante {fmtMoney(newOwnership.remainingLoanBalance)}
+            </span>
+          )}
+        </div>
+        <div className="result-horizon-card">
+          <span className="result-horizon-label">Lecture mensuelle</span>
+          <strong>{monthlyGapWithLoan > 0 ? "+" : ""}{fmt(monthlyGapWithLoan)} €/mois</strong>
+          <span className="result-horizon-note">
+            Avec prêt vs ancien véhicule
+          </span>
+          <span className="result-horizon-note">
+            Après prêt {monthlyGapAfterLoan > 0 ? "+" : ""}{fmt(monthlyGapAfterLoan)} €/mois
           </span>
         </div>
       </div>
@@ -232,6 +283,14 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
             <td>{fmt(newCost.maintenance / 12)} €/mois</td>
             <td>{fmt(newCost.maintenance / 12)} €/mois</td>
           </tr>
+          {(oldCost.insurance > 0 || newCost.insurance > 0) && (
+            <tr>
+              <td>Assurance</td>
+              <td>{oldCost.insurance > 0 ? `${fmt(oldCost.insurance / 12)} €/mois` : "—"}</td>
+              <td>{newCost.insurance > 0 ? `${fmt(newCost.insurance / 12)} €/mois` : "—"}</td>
+              <td>{newCost.insurance > 0 ? `${fmt(newCost.insurance / 12)} €/mois` : "—"}</td>
+            </tr>
+          )}
           <tr>
             <td>Mensualité prêt</td>
             <td>—</td>
@@ -277,20 +336,23 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
             <Bar dataKey="Abonnement" stackId="a" fill={COLORS.subscription} barSize={40} />
           )}
           <Bar dataKey="Entretien" stackId="a" fill={COLORS.maintenance} barSize={40} />
+          {(oldCost.insurance > 0 || newCost.insurance > 0) && (
+            <Bar dataKey="Assurance" stackId="a" fill={COLORS.insurance} barSize={40} />
+          )}
         </BarChart>
       </ResponsiveContainer>
 
       <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 8, paddingTop: 16 }}>
         <button className="collapsible-header" onClick={() => setShowCumul(!showCumul)}>
-          <h3 className="collapsible-title">Coût total cumulé</h3>
-          {!showCumul && cumulBreakeven && (
+          <h3 className="collapsible-title">Rentabilité mensuelle cumulée</h3>
+          {!showCumul && monthlyBreakeven && (
             <span className="collapsible-badge badge-green">
-              Rentable dès {cumulBreakeven}
+              Favorable dès {monthlyBreakeven}
             </span>
           )}
-          {!showCumul && !cumulBreakeven && loanMonths > 0 && (
+          {!showCumul && !monthlyBreakeven && loanMonths > 0 && (
             <span className="collapsible-badge badge-red">
-              Rentable après {SEARCH_HORIZON} ans
+              Non amorti sur {SEARCH_HORIZON} ans
             </span>
           )}
           <span className="collapsible-arrow">{showCumul ? "▲" : "▼"}</span>
@@ -299,16 +361,17 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
         {showCumul && (
           <>
             <p style={{ fontSize: 13, color: "#64748b", margin: "8px 0 16px" }}>
-              Argent total dépensé depuis l'achat : comparer garder l'ancien véhicule vs acquérir le nouveau.
+              Comparaison simple des coûts mensuels visibles : ancien véhicule d'un côté, nouveau véhicule avec mensualité de prêt pendant le financement puis nouveau véhicule seul après le prêt. Les coûts ponctuels, la reprise et la valeur résiduelle ne sont pas utilisés pour ce seuil.
+              {ownershipBreakeven && ` En coût de possession avec valeur résiduelle, le nouveau véhicule devient favorable dès ${ownershipBreakeven}.`}
             </p>
             <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-              {cumulBreakeven ? (
+              {monthlyBreakeven ? (
                 <span style={{ fontSize: 13, fontWeight: 600, color: "#10b981", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "3px 10px" }}>
-                  Rentable dès {cumulBreakeven}
+                  Favorable dès {monthlyBreakeven}
                 </span>
               ) : loanMonths > 0 ? (
                 <span style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "3px 10px" }}>
-                  Rentable après {SEARCH_HORIZON} ans (hors hausse entretien)
+                  Non amorti sur {SEARCH_HORIZON} ans
                 </span>
               ) : null}
             </div>
@@ -327,9 +390,9 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
                     label={{ value: "Fin du prêt", fontSize: 11, fill: "#f59e0b", position: "insideTopRight" }}
                   />
                 )}
-                {cumulBreakeven && (
+                {monthlyBreakeven && (
                   <ReferenceLine
-                    x={cumulBreakeven}
+                    x={monthlyBreakeven}
                     stroke="#10b981"
                     strokeDasharray="4 4"
                     label={{ value: "Seuil", fontSize: 11, fill: "#10b981", position: "insideTopLeft" }}

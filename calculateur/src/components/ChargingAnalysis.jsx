@@ -14,6 +14,7 @@ import {
   getAverageElectricConsumption,
   getBlendedElectricityPrice,
   getChargingStationPrice,
+  getInflatedAnnualCostTotal,
   getSubscriptionCostForMonths,
   getTotalUsageCost,
 } from "../utils/calculations";
@@ -23,6 +24,7 @@ const CHART_COLORS = {
   subscription: "#f59e0b",
   charger: "#fb7185",
   maintenance: "#10b981",
+  insurance: "#64748b",
 };
 
 function load(key, fallback) {
@@ -310,20 +312,22 @@ export default function ChargingAnalysis({
           offer.hp_price_eur_per_kwh,
           offPeakShare
         );
-        const energyMonthly = (yearlyKwh * blendedPrice) / 12;
-        const energyYearly = yearlyKwh * blendedPrice;
+        const firstYearEnergy = yearlyKwh * blendedPrice;
+        const energyTotal = getInflatedAnnualCostTotal(firstYearEnergy, effectiveMonths);
+        const energyMonthly = energyTotal / effectiveMonths;
+        const energyYearly = energyMonthly * 12;
         const subscriptionTotal = getSubscriptionCostForMonths(offer, effectiveMonths);
         const subscriptionMonthly = subscriptionTotal / effectiveMonths;
         const station = getChargingStationPrice(offer, chargerTiming);
         const chargerPrice = includeCharger ? station.price : 0;
         const chargerMonthly = chargerPrice / effectiveMonths;
         const chargingMonthly = energyMonthly + subscriptionMonthly + chargerMonthly;
-        const chargingTotal = (energyMonthly * effectiveMonths) + subscriptionTotal + chargerPrice;
+        const chargingTotal = energyTotal + subscriptionTotal + chargerPrice;
         const averageYearlySubscription = subscriptionMonthly * 12;
         const firstYearSubscription = getSubscriptionCostForMonths(offer, 12);
         const usageMonthly = chargingMonthly + (maintenanceYearly / 12);
         const usageYearly = energyYearly + averageYearlySubscription + maintenanceYearly + (chargerPrice * (12 / effectiveMonths));
-        const firstYearUsage = energyYearly + firstYearSubscription + maintenanceYearly + chargerPrice;
+        const firstYearUsage = firstYearEnergy + firstYearSubscription + maintenanceYearly + chargerPrice;
 
         return {
           ...offer,
@@ -346,12 +350,14 @@ export default function ChargingAnalysis({
         };
       });
 
-    const individualEnergyMonthly = (yearlyKwh * safe(individualTariff)) / 12;
-    const individualEnergyYearly = yearlyKwh * safe(individualTariff);
+    const individualFirstYearEnergy = yearlyKwh * safe(individualTariff);
+    const individualEnergyTotal = getInflatedAnnualCostTotal(individualFirstYearEnergy, effectiveMonths);
+    const individualEnergyMonthly = individualEnergyTotal / effectiveMonths;
+    const individualEnergyYearly = individualEnergyMonthly * 12;
     const individualChargerValue = includeCharger ? safe(individualChargerCost) : 0;
     const individualChargerMonthly = individualChargerValue / effectiveMonths;
     const individualChargingMonthly = individualEnergyMonthly + individualChargerMonthly;
-    const individualChargingTotal = (individualEnergyMonthly * effectiveMonths) + individualChargerValue;
+    const individualChargingTotal = individualEnergyTotal + individualChargerValue;
 
     const individualReferenceRow = {
       id: "individual_reference",
@@ -375,7 +381,7 @@ export default function ChargingAnalysis({
       chargingTotal: individualChargingTotal,
       usageMonthly: individualChargingMonthly + (maintenanceYearly / 12),
       usageYearly: individualEnergyYearly + maintenanceYearly + (individualChargerValue * (12 / effectiveMonths)),
-      firstYearUsage: individualEnergyYearly + maintenanceYearly + individualChargerValue,
+      firstYearUsage: individualFirstYearEnergy + maintenanceYearly + individualChargerValue,
     };
 
     return [...residenceRows, individualReferenceRow]
@@ -436,6 +442,7 @@ export default function ChargingAnalysis({
         Abonnement: oldUsageForWeeklyKm.chargingSubscription / 12,
         Borne: 0,
         Entretien: comparisonMode === "full" ? oldUsageForWeeklyKm.maintenance / 12 : 0,
+        Assurance: comparisonMode === "full" ? oldUsageForWeeklyKm.insurance / 12 : 0,
       },
       {
         name: "VE + meilleure offre",
@@ -443,9 +450,10 @@ export default function ChargingAnalysis({
         Abonnement: summaryOffer.subscriptionMonthly,
         Borne: comparisonIncludesBorne ? summaryOffer.chargerMonthly : 0,
         Entretien: comparisonMode === "full" ? monthlyMaintenance : 0,
+        Assurance: comparisonMode === "full" ? (safe(sourceVehicle?.insuranceYearly) / 12) : 0,
       },
     ];
-  }, [comparisonIncludesBorne, comparisonMode, monthlyMaintenance, oldUsageForWeeklyKm, summaryOffer]);
+  }, [comparisonIncludesBorne, comparisonMode, monthlyMaintenance, oldUsageForWeeklyKm, sourceVehicle, summaryOffer]);
 
   const offersChartData = useMemo(() => (
     offerRows.map((offer) => ({
@@ -879,6 +887,7 @@ export default function ChargingAnalysis({
                   <Legend />
                   <Bar dataKey="Energie" stackId="cost" fill={CHART_COLORS.energy} />
                   <Bar dataKey="Entretien" stackId="cost" fill={CHART_COLORS.maintenance} />
+                  <Bar dataKey="Assurance" stackId="cost" fill={CHART_COLORS.insurance} />
                   <Bar dataKey="Abonnement" stackId="cost" fill={CHART_COLORS.subscription} />
                   <Bar dataKey="Borne" stackId="cost" fill={CHART_COLORS.charger} />
                 </BarChart>

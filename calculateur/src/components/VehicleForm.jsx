@@ -166,6 +166,12 @@ export default function VehicleForm({ type, data, setData, title, role = "curren
         onChange={(num) => setData({ ...data, year: num })} />
       <Field label={t.currentKm} value={data.currentKm} integer
         onChange={(num) => setData({ ...data, currentKm: num })} />
+      <Field
+        label="Assurance annuelle (€)"
+        value={data.insuranceYearly}
+        onChange={(num) => setData({ ...data, insuranceYearly: num })}
+        hint="Laisser 0 pour ne pas inclure l'assurance."
+      />
 
       <div className="field-divider" />
 
