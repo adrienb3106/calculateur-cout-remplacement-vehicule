@@ -14,9 +14,11 @@ import {
 import {
   getTotalUsageCost,
   getFinancing,
+  getHorizonCashCost,
 } from "../utils/calculations";
 
 const fmt = (v) => (Number.isFinite(v) ? v.toFixed(2) : "—");
+const fmtMoney = (v) => (Number.isFinite(v) ? `${Math.round(v).toLocaleString("fr-FR")} €` : "—");
 
 const COLORS = {
   fuel: "#3b82f6",
@@ -73,6 +75,20 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
     ? (Number(newCar.chargerCost) || 0)
     : 0;
   const hasChargingSubscription = oldCost.chargingSubscription > 0 || newCost.chargingSubscription > 0;
+  const loanMonths = finance.duration || 0;
+  const horizonMonths = loanMonths > 0 ? loanMonths : 36;
+  const oldHorizonCost = getHorizonCashCost({
+    usageCost: oldCost,
+    horizonMonths,
+  });
+  const newHorizonCost = getHorizonCashCost({
+    usageCost: newCost,
+    financing,
+    horizonMonths,
+    loanMonths,
+    oneShotCosts: charger,
+  });
+  const horizonDiff = newHorizonCost.total - oldHorizonCost.total;
 
   const chartData = [
     {
@@ -98,7 +114,6 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
     },
   ];
 
-  const loanMonths = finance.duration || 0;
   const SEARCH_HORIZON = 25;
   const OLD_MAINT_GROWTH = oldCar.type === "thermal" ? 0.06 : 0;
 
@@ -155,6 +170,37 @@ export default function Results({ oldCar, newCar, finance, kmCity, kmHighway }) 
           Borne en résidence : calcul basé sur la meilleure offre actuelle, {newCost.residenceOfferLabel}.
         </p>
       )}
+
+      <div className="result-horizon-grid">
+        <div className="result-horizon-card">
+          <span className="result-horizon-label">Horizon retenu</span>
+          <strong>{horizonMonths} mois</strong>
+          <span className="result-horizon-note">
+            Durée du prêt, sinon 36 mois
+          </span>
+        </div>
+        <div className="result-horizon-card">
+          <span className="result-horizon-label">Ancien véhicule</span>
+          <strong>{fmtMoney(oldHorizonCost.total)}</strong>
+          <span className="result-horizon-note">
+            Usage cumulé sur l'horizon
+          </span>
+        </div>
+        <div className="result-horizon-card">
+          <span className="result-horizon-label">Nouveau véhicule</span>
+          <strong>{fmtMoney(newHorizonCost.total)}</strong>
+          <span className="result-horizon-note">
+            Usage + prêt + coûts uniques
+          </span>
+        </div>
+        <div className={horizonDiff <= 0 ? "result-horizon-card result-horizon-good" : "result-horizon-card result-horizon-bad"}>
+          <span className="result-horizon-label">Écart horizon</span>
+          <strong>{horizonDiff > 0 ? "+" : ""}{fmtMoney(horizonDiff)}</strong>
+          <span className="result-horizon-note">
+            Hors valeur de revente
+          </span>
+        </div>
+      </div>
 
       <table className="result-table">
         <thead>

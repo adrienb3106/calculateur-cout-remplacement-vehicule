@@ -286,3 +286,27 @@ export function getFinancing(data) {
     monthlyLoan,
   };
 }
+
+export function getHorizonCashCost({
+  usageCost,
+  financing = {},
+  horizonMonths = 36,
+  loanMonths = 0,
+  oneShotCosts = 0,
+}) {
+  const months = Math.max(1, Math.round(safe(horizonMonths) || 36));
+  const activeLoanMonths = Math.min(months, Math.max(0, Math.round(safe(loanMonths))));
+  const usageTotal = safe(usageCost?.monthly) * months;
+  const loanTotal = safe(financing?.monthlyLoan) * activeLoanMonths;
+  const oneShotTotal = safe(oneShotCosts);
+  const total = usageTotal + loanTotal + oneShotTotal;
+
+  return {
+    horizonMonths: months,
+    usageTotal,
+    loanTotal,
+    oneShotTotal,
+    total,
+    averageMonthly: total / months,
+  };
+}
