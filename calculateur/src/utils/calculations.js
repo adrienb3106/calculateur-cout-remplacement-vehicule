@@ -185,13 +185,39 @@ export function getFuelCostPerYear(vehicle, kmCity, kmHighway) {
   return cityCost + highwayCost;
 }
 
+export function getMaintenanceBreakdown(vehicle, kmCity, kmHighway) {
+  const annualKm = safe(kmCity) + safe(kmHighway);
+  const ratePer100Km = vehicle.type === "electric" ? 2 : 6;
+  const baseMaintenance = (annualKm / 100) * ratePer100Km;
+  const currentYear = new Date().getFullYear();
+  const registrationYear = safe(vehicle?.year) || currentYear;
+  const age = Math.max(0, currentYear - registrationYear);
+  const currentKm = safe(vehicle?.currentKm);
+  const ageThreshold = vehicle.type === "electric" ? 8 : 5;
+  const kmThreshold = vehicle.type === "electric" ? 120000 : 100000;
+  const ageSurcharge = Math.min(0.30, Math.max(0, age - ageThreshold) * 0.03);
+  const kmSurcharge = Math.min(0.25, Math.max(0, currentKm - kmThreshold) / 50000 * 0.05);
+  const factor = 1 + ageSurcharge + kmSurcharge;
+
+  return {
+    annualKm,
+    ratePer100Km,
+    baseMaintenance,
+    age,
+    currentKm,
+    ageSurcharge,
+    kmSurcharge,
+    factor,
+    maintenance: baseMaintenance * factor,
+  };
+}
+
 export function getTotalUsageCost(vehicle, kmCity, kmHighway) {
   const breakdown = getEnergyUsageBreakdown(vehicle, kmCity, kmHighway);
   const fuel = breakdown.energyYearly;
   const subscription = breakdown.subscriptionYearly;
-  const annualKm = safe(kmCity) + safe(kmHighway);
-  const maintenanceRatePer100Km = vehicle.type === "electric" ? 2 : 6;
-  const maintenance = (annualKm / 100) * maintenanceRatePer100Km;
+  const maintenanceBreakdown = getMaintenanceBreakdown(vehicle, kmCity, kmHighway);
+  const maintenance = maintenanceBreakdown.maintenance;
 
   const total = breakdown.totalYearly + maintenance;
 
@@ -201,6 +227,10 @@ export function getTotalUsageCost(vehicle, kmCity, kmHighway) {
     fuel,
     chargingSubscription: subscription,
     maintenance,
+    maintenanceBase: maintenanceBreakdown.baseMaintenance,
+    maintenanceFactor: maintenanceBreakdown.factor,
+    maintenanceAgeSurcharge: maintenanceBreakdown.ageSurcharge,
+    maintenanceKmSurcharge: maintenanceBreakdown.kmSurcharge,
     effectiveEnergyPrice: breakdown.effectivePrice,
     offPeakShare: breakdown.offPeakShare,
     residenceOfferLabel: breakdown.residenceOfferLabel,

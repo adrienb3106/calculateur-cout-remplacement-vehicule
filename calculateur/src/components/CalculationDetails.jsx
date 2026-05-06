@@ -190,10 +190,16 @@ export default function CalculationDetails({
 
           <DetailCard
             title="Entretien"
-            formula={`entretien annuel thermique = (km annuels / 100) × 6\nentretien annuel électrique = (km annuels / 100) × 2`}
+            formula={`base thermique = (km annuels / 100) × 6\nbase électrique = (km annuels / 100) × 2\nentretien annuel = base × coefficient âge/kilométrage`}
           >
             <p>
-              Le logiciel calcule l'entretien à partir du kilométrage annuel total et d'un coût forfaitaire pour 100 km selon la motorisation.
+              Le logiciel part d'un coût forfaitaire pour 100 km, puis applique automatiquement un coefficient si le véhicule est ancien ou fortement kilométré.
+            </p>
+            <p>
+              Coefficient actuel : <strong>{formatNumber(oldUsage.maintenanceFactor, 2)}</strong>
+            </p>
+            <p>
+              Coefficient neuf : <strong>{formatNumber(newUsage.maintenanceFactor, 2)}</strong>
             </p>
             <p>
               Actuel : <strong>{formatCurrency(oldUsage.maintenance)}</strong> par an.
